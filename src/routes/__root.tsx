@@ -1,10 +1,11 @@
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
+import { HeadContent, Scripts, createRootRoute, useRouter } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 
-import Header from '../components/Header'
-
 import appCss from '../styles.css?url'
+import AdminLayout from '@/components/layout/admin-layout'
+
+const publicPaths = ["/login", "/register"]
 
 export const Route = createRootRoute({
   head: () => ({
@@ -17,7 +18,7 @@ export const Route = createRootRoute({
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'TanStack Start Starter',
+        title: 'HRM - Human Resource Management',
       },
     ],
     links: [
@@ -32,14 +33,25 @@ export const Route = createRootRoute({
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  const router = useRouter()
+
+  const isPublicPath = publicPaths.includes(router.state.location.pathname)
+
   return (
     <html lang="en">
       <head>
         <HeadContent />
       </head>
       <body>
-        <Header />
-        {children}
+        {
+          isPublicPath ? (
+            children
+          ) : (
+            <AdminLayout>
+              {children}
+            </AdminLayout>
+          )
+        }
         <TanStackDevtools
           config={{
             position: 'bottom-right',

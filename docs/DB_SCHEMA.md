@@ -2,7 +2,18 @@
 
 ## 1. Sơ đồ thực thể (Entities)
 
-### 1.1. Bảng `roles` (Vai trò hệ thống)
+### 1.1. Bảng `career_bands` (Cấp bậc nghề nghiệp)
+
+Định nghĩa dải cấp bậc trong công ty từ Intern đến Senior/Lead.
+
+- `id`: INT (PK)
+- `band_name`: VARCHAR (Band 0, Band 1, Band 2, Band 3, Band 4)
+- `title`: VARCHAR (Intern, Junior, Middle, Senior, Expert/Lead)
+- `description`: TEXT
+- `created_at`: TIMESTAMP
+- `updated_at`: TIMESTAMP
+
+### 1.2. Bảng `roles` (Vai trò hệ thống)
 
 Lưu trữ các cấp bậc quyền hạn trong hệ thống.
 
@@ -36,6 +47,7 @@ Thông tin đăng nhập và định danh cơ bản.
 - `password_hash`: VARCHAR.
 - `role_id`: INT (FK) - Liên kết `roles`.
 - `team_id`: INT (FK) - Liên kết `teams` (Mỗi người thuộc 1 team).
+- `career_band_id`: INT (FK) - Liên kết `career_bands`.
 - `status`: ENUM ('ACTIVE', 'INACTIVE', 'ON_LEAVED', 'RETIRED').
 - `created_at`: TIMESTAMP
 - `updated_at`: TIMESTAMP
@@ -91,92 +103,135 @@ Lưu trữ các phiên bản CV của nhân viên.
 - `updated_at`: TIMESTAMP
 - `deleted_at`: TIMESTAMP
 
-### 2.3. Quản lý Kỹ năng (Skill Management)
+---
 
-#### 2.3.1. Bảng `master_skills` (Danh mục kỹ năng)
+## 3. Quản trị Khung năng lực & Đánh giá (Competency & Assessment)
 
-Danh sách định nghĩa các kỹ năng (cả chuyên môn và kỹ năng mềm).
+### 3.1. Bảng `competency_groups` (Nhóm năng lực)
 
-- `id`: INT (PK)
-- `name`: VARCHAR (React, Giao tiếp, Tiếng Anh...).
-- `type`: ENUM ('HARD_SKILL', 'SOFT_SKILL').
-- `category`: VARCHAR (Frontend, Backend, Soft Skill...).
-- `description`: TEXT.
-- `created_at`: TIMESTAMP
-- `updated_at`: TIMESTAMP
-- `deleted_at`: TIMESTAMP
-
-#### 2.3.2. Bảng `skill_levels` (Cấp độ kỹ năng)
-
-Định nghĩa các level cho từng kỹ năng cụ thể (VD: React có Junior/Senior, Tiếng Anh có IELTS 6.0/7.0).
+Phân loại năng lực (VD: Cốt lõi, Chuyên môn, Lãnh đạo).
 
 - `id`: INT (PK)
-- `skill_id`: INT (FK) - Liên kết `master_skills`.
-- `name`: VARCHAR (Junior, Senior, Level 1, Level 2...).
-- `level_order`: INT - Dùng để sắp xếp thứ tự thấp đến cao (1, 2, 3...).
+- `name`: VARCHAR (Core Competency, Technical, Leadership)
+- `description`: TEXT
 - `created_at`: TIMESTAMP
-- `updated_at`: TIMESTAMP
-- `deleted_at`: TIMESTAMP
 
-#### 2.3.3. Bảng `skill_criteria` (Tiêu chí đánh giá)
+### 3.2. Bảng `competencies` (Từ điển năng lực)
 
-Các yêu cầu chi tiết để đạt được level tương ứng.
+Danh sách các năng lực cụ thể.
 
 - `id`: INT (PK)
-- `level_id`: INT (FK) - Liên kết `skill_levels`.
-- `content`: TEXT - Nội dung yêu cầu (VD: "Hiểu rõ về React Hooks").
+- `group_id`: INT (FK) - Liên kết `competency_groups`.
+- `name`: VARCHAR (Giải quyết vấn đề, Tư duy logic, ReactJS...)
+- `description`: TEXT
 - `created_at`: TIMESTAMP
-- `updated_at`: TIMESTAMP
-- `deleted_at`: TIMESTAMP
 
-#### 2.3.4. Bảng `user_skills` (Kỹ năng nhân viên)
+### 3.3. Bảng `competency_levels` (Cấp độ năng lực)
 
-Lưu trữ đánh giá kỹ năng của từng nhân sự.
+Định nghĩa các mức độ từ 1 đến 5 cho từng năng lực.
+
+- `id`: INT (PK)
+- `competency_id`: INT (FK)
+- `level_number`: INT (1-5)
+- `behavioral_indicator`: TEXT - Hành vi minh chứng cho cấp độ này.
+- `created_at`: TIMESTAMP
+
+### 3.4. Bảng `competency_requirements` (Yêu cầu năng lực)
+
+Xác định mức độ (Required Level) tối thiểu cho mỗi Role và Career Band.
+
+- `id`: INT (PK)
+- `role_id`: INT (FK)
+- `career_band_id`: INT (FK)
+- `competency_id`: INT (FK)
+- `required_level`: INT (1-5)
+- `created_at`: TIMESTAMP
+
+### 3.5. Bảng `assessment_cycles` (Chu kỳ đánh giá)
+
+Quản lý các đợt đánh giá định kỳ.
+
+- `id`: INT (PK)
+- `name`: VARCHAR (Đánh giá định kỳ Q1/2024)
+- `start_date`: DATE
+- `end_date`: DATE
+- `status`: ENUM ('DRAFT', 'ACTIVE', 'COMPLETED')
+- `created_at`: TIMESTAMP
+
+### 3.6. Bảng `user_assessments` (Kết quả đánh giá tổng hợp)
 
 - `id`: INT (PK)
 - `user_id`: INT (FK)
-- `skill_id`: INT (FK) - Liên kết `master_skills`.
-- `level_id`: INT (FK) - Liên kết `skill_levels` (Level hiện tại của nhân viên).
-- `assessed_at`: DATE - Ngày đánh giá gần nhất.
-- `note`: TEXT - Ghi chú thêm.
+- `cycle_id`: INT (FK)
+- `self_score_avg`: FLOAT - Trung bình điểm tự đánh giá.
+- `leader_score_avg`: FLOAT - Trung bình điểm quản lý đánh giá.
+- `final_score_avg`: FLOAT - Điểm thống nhất cuối cùng.
+- `status`: ENUM ('SELF_ASSESSING', 'LEADER_ASSESSING', 'DISCUSSION', 'DONE')
+- `feedback`: TEXT
 - `created_at`: TIMESTAMP
-- `updated_at`: TIMESTAMP
-- `deleted_at`: TIMESTAMP
 
-### 2.9. Chấm công & Yêu cầu nghỉ phép (Time & Attendance)
+### 3.7. Bảng `user_assessment_details` (Chi tiết điểm từng năng lực)
 
-#### 2.9.1. Bảng `attendance_logs` (Nhật ký chấm công)
+- `id`: INT (PK)
+- `user_assessment_id`: INT (FK)
+- `competency_id`: INT (FK)
+- `self_score`: INT (1-5)
+- `leader_score`: INT (1-5)
+- `final_score`: INT (1-5)
+- `gap`: INT - Khoảng cách (Final - Required Level).
+- `note`: TEXT
+
+### 3.8. Bảng `individual_development_plans` (Kế hoạch IDP)
+
+- `id`: INT (PK)
+- `user_assessment_id`: INT (FK) - IDP được lập dựa trên kết quả đánh giá.
+- `user_id`: INT (FK)
+- `goal`: TEXT - Mục tiêu phát triển.
+- `start_date`: DATE
+- `end_date`: DATE
+- `status`: ENUM ('IN_PROGRESS', 'COMPLETED', 'CANCELLED')
+- `created_at`: TIMESTAMP
+
+### 3.9. Bảng `idp_activities` (Hoạt động phát triển cá nhân)
+
+- `id`: INT (PK)
+- `idp_id`: INT (FK)
+- `competency_id`: INT (FK) - Năng lực cần cải thiện.
+- `activity_type`: ENUM ('TRAINING', 'MENTORING', 'PROJECT_CHALLENGE', 'SELF_STUDY')
+- `description`: TEXT
+- `evidence`: TEXT - Minh chứng hoàn thành.
+- `status`: ENUM ('PENDING', 'DONE')
+
+- `due_date`: DATE
+
+---
+
+## 4. Chấm công & Yêu cầu nghỉ phép (Time & Attendance)
+
+### 4.1. Bảng `attendance_logs` (Nhật ký chấm công)
 
 Ghi nhận thời gian vào/ra của nhân viên.
 
 - `id`: INT (PK)
 - `user_id`: INT (FK)
-- `check_in_time`: TIMESTAMP - Thời gian vào.
-- `check_out_time`: TIMESTAMP - Thời gian ra.
-- `date`: DATE - Ngày làm việc.
-- `status`: ENUM ('ON_TIME', 'LATE', 'EARLY_LEAVE', 'ABSENT') - Trạng thái.
-- `total_hours`: FLOAT - Tổng số giờ làm việc trong ngày.
-- `note`: TEXT.
+- `check_in_time`: TIMESTAMP
+- `check_out_time`: TIMESTAMP
+- `date`: DATE
+- `status`: ENUM ('ON_TIME', 'LATE', 'EARLY_LEAVE', 'ABSENT')
+- `total_hours`: FLOAT
 - `created_at`: TIMESTAMP
-- `updated_at`: TIMESTAMP
-- `deleted_at`: TIMESTAMP
 
-#### 2.9.2. Bảng `work_requests` (Yêu cầu nghỉ phép/WFH/OT)
-
-Quản lý các yêu cầu nghỉ phép, làm việc từ xa, hoặc làm thêm giờ.
+### 4.2. Bảng `work_requests` (Yêu cầu nghỉ phép/WFH/OT)
 
 - `id`: INT (PK)
-- `user_id`: INT (FK) - Người tạo yêu cầu.
-- `type`: ENUM ('LEAVE', 'WFH', 'LATE', 'EARLY', 'OVERTIME').
-- `start_date`: TIMESTAMP - Thời gian bắt đầu.
-- `end_date`: TIMESTAMP - Thời gian kết thúc.
-- `reason`: TEXT - Lý do.
-- `approver_id`: INT (FK) - Người duyệt (Leader hoặc HR).
-- `status`: ENUM ('PENDING', 'APPROVED', 'REJECTED').
-- `rejection_reason`: TEXT - Lý do từ chối.
+- `user_id`: INT (FK)
+- `type`: ENUM ('LEAVE', 'WFH', 'LATE', 'EARLY', 'OVERTIME')
+- `start_date`: TIMESTAMP
+- `end_date`: TIMESTAMP
+- `reason`: TEXT
+- `approver_id`: INT (FK)
+- `status`: ENUM ('PENDING', 'APPROVED', 'REJECTED')
 - `created_at`: TIMESTAMP
-- `updated_at`: TIMESTAMP
-- `deleted_at`: TIMESTAMP
 
 ---
 
@@ -257,12 +312,17 @@ Lưu trữ các thay đổi thông tin cá nhân cần được phê duyệt.
 
 ---
 
-## 3. Mối quan hệ giữa các bảng (Relationships)
+## 5. Mối quan hệ giữa các bảng (Relationships)
 
-- **Users - Roles**: N-1 (Nhiều nhân viên có cùng 1 vai trò).
-- **Users - Teams**: N-1 (Nhiều nhân viên thuộc về 1 team chuyên môn).
-- **Users - Profiles**: 1-1 (Mỗi tài khoản có duy nhất một hồ sơ chi tiết).
-- **Users - CVs/Skills/Education/Achievements**: 1-N (Một nhân viên có nhiều bản CV, nhiều kỹ năng và lịch sử công tác).
+- **Users - Career Bands**: N-1 (Nhiều nhân viên thuộc cùng 1 dải cấp bậc).
+- **Users - Roles/Teams**: N-1.
+- **Users - Profiles**: 1-1.
+- **Competency Groups - Competencies**: 1-N.
+- **Competencies - Competency Levels**: 1-N (Mỗi năng lực có 5 cấp bậc hành vi).
+- **Assessment Cycles - User Assessments**: 1-N.
+- **User Assessments - User Assessment Details**: 1-N.
+- **User Assessments - IDPs**: 1-1 (Mỗi đợt đánh giá có thể dẫn tới 1 kế hoạch IDP).
+- **IDPs - IDP Activities**: 1-N.
 
 ## 4. Ghi chú thiết kế cho Developer
 
