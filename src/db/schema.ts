@@ -73,7 +73,48 @@ export const profileUpdateStatusEnum = pgEnum('profile_update_status', [
   'REJECTED',
 ]);
 
-// --- 1.1 Roles ---
+export const assessmentCycleStatusEnum = pgEnum('assessment_cycle_status', [
+  'DRAFT',
+  'ACTIVE',
+  'COMPLETED',
+]);
+
+export const assessmentStatusEnum = pgEnum('assessment_status', [
+  'SELF_ASSESSING',
+  'LEADER_ASSESSING',
+  'DISCUSSION',
+  'DONE',
+]);
+
+export const idpStatusEnum = pgEnum('idp_status', [
+  'IN_PROGRESS',
+  'COMPLETED',
+  'CANCELLED',
+]);
+
+export const idpActivityTypeEnum = pgEnum('idp_activity_type', [
+  'TRAINING',
+  'MENTORING',
+  'PROJECT_CHALLENGE',
+  'SELF_STUDY',
+]);
+
+export const idpActivityStatusEnum = pgEnum('idp_activity_status', [
+  'PENDING',
+  'DONE',
+]);
+
+// --- 1.1 Career Bands ---
+export const careerBands = pgTable('career_bands', {
+  id: serial('id').primaryKey(),
+  bandName: varchar('band_name', { length: 50 }).notNull(), // Band 0, Band 1, ...
+  title: varchar('title', { length: 100 }).notNull(), // Intern, Junior, Middle, Senior, Expert/Lead
+  description: text('description'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// --- 1.2 Roles ---
 export const roles = pgTable('roles', {
   id: serial('id').primaryKey(),
   roleName: varchar('role_name', { length: 50 }).notNull(), // Admin, HR, Leader, Dev
@@ -94,7 +135,7 @@ export const teams = pgTable('teams', {
   deletedAt: timestamp('deleted_at'),
 });
 
-// --- 1.3 Users ---
+// --- 1.4 Users ---
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
   employeeCode: varchar('employee_code', { length: 50 }).unique().notNull(),
@@ -103,6 +144,7 @@ export const users = pgTable('users', {
   passwordHash: varchar('password_hash', { length: 255 }).notNull(),
   roleId: integer('role_id').references(() => roles.id),
   teamId: integer('team_id').references(() => teams.id),
+  careerBandId: integer('career_band_id').references(() => careerBands.id),
   status: userStatusEnum('status').default('ACTIVE'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
@@ -144,6 +186,17 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   requestsToApprove: many(workRequests, { relationName: 'request_approver' }),
   profileUpdatesToReview: many(profileUpdateRequests, { relationName: 'profile_update_reviewer' }),
   sentEmails: many(emailLogs),
+  careerBand: one(careerBands, {
+    fields: [users.careerBandId],
+    references: [careerBands.id],
+  }),
+  userAssessments: many(userAssessments),
+  individualDevelopmentPlans: many(individualDevelopmentPlans),
+}));
+
+export const careerBandsRelations = relations(careerBands, ({ many }) => ({
+  users: many(users),
+  competencyRequirements: many(competencyRequirements),
 }));
 
 export const teamsRelations = relations(teams, ({ one, many }) => ({
@@ -216,6 +269,193 @@ export const cvAttachmentsRelations = relations(cvAttachments, ({ one }) => ({
   user: one(users, {
     fields: [cvAttachments.userId],
     references: [users.id],
+  }),
+}));
+
+// --- 3.1 Competency Groups ---
+export const competencyGroups = pgTable('competency_groups', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 100 }).notNull(), // Core, Technical, Leadership
+  description: text('description'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// --- 3.2 Competencies ---
+export const competencies = pgTable('competencies', {
+  id: serial('id').primaryKey(),
+  groupId: integer('group_id').references(() => competencyGroups.id).notNull(),
+  name: varchar('name', { length: 200 }).notNull(),
+  description: text('description'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// --- 3.3 Competency Levels ---
+export const competencyLevels = pgTable('competency_levels', {
+  id: serial('id').primaryKey(),
+  competencyId: integer('competency_id').references(() => competencies.id).notNull(),
+  levelNumber: integer('level_number').notNull(), // 1-5
+  behavioralIndicator: text('behavioral_indicator'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// --- 3.4 Competency Requirements ---
+export const competencyRequirements = pgTable('competency_requirements', {
+  id: serial('id').primaryKey(),
+  roleId: integer('role_id').references(() => roles.id).notNull(),
+  careerBandId: integer('career_band_id').references(() => careerBands.id).notNull(),
+  competencyId: integer('competency_id').references(() => competencies.id).notNull(),
+  requiredLevel: integer('required_level').notNull(), // 1-5
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// --- 3.5 Assessment Cycles ---
+export const assessmentCycles = pgTable('assessment_cycles', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 200 }).notNull(),
+  startDate: date('start_date').notNull(),
+  endDate: date('end_date').notNull(),
+  status: assessmentCycleStatusEnum('status').default('DRAFT'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// --- 3.6 User Assessments ---
+export const userAssessments = pgTable('user_assessments', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  cycleId: integer('cycle_id').references(() => assessmentCycles.id).notNull(),
+  selfScoreAvg: integer('self_score_avg'), // Or real? Final decision: real for averages
+  leaderScoreAvg: integer('leader_score_avg'), 
+  finalScoreAvg: integer('final_score_avg'),
+  status: assessmentStatusEnum('status').default('SELF_ASSESSING'),
+  feedback: text('feedback'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// --- 3.7 User Assessment Details ---
+export const userAssessmentDetails = pgTable('user_assessment_details', {
+  id: serial('id').primaryKey(),
+  userAssessmentId: integer('user_assessment_id').references(() => userAssessments.id).notNull(),
+  competencyId: integer('competency_id').references(() => competencies.id).notNull(),
+  selfScore: integer('self_score'),
+  leaderScore: integer('leader_score'),
+  finalScore: integer('final_score'),
+  gap: integer('gap'),
+  note: text('note'),
+});
+
+// --- 3.8 Individual Development Plans (IDP) ---
+export const individualDevelopmentPlans = pgTable('individual_development_plans', {
+  id: serial('id').primaryKey(),
+  userAssessmentId: integer('user_assessment_id').references(() => userAssessments.id),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  goal: text('goal').notNull(),
+  startDate: date('start_date').notNull(),
+  endDate: date('end_date').notNull(),
+  status: idpStatusEnum('status').default('IN_PROGRESS'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// --- 3.9 IDP Activities ---
+export const idpActivities = pgTable('idp_activities', {
+  id: serial('id').primaryKey(),
+  idpId: integer('idp_id').references(() => individualDevelopmentPlans.id).notNull(),
+  competencyId: integer('competency_id').references(() => competencies.id).notNull(),
+  activityType: idpActivityTypeEnum('activity_type').notNull(),
+  description: text('description').notNull(),
+  evidence: text('evidence'),
+  status: idpActivityStatusEnum('status').default('PENDING'),
+  dueDate: date('due_date'),
+});
+
+// --- Competency Relations ---
+export const competencyGroupsRelations = relations(competencyGroups, ({ many }) => ({
+  competencies: many(competencies),
+}));
+
+export const competenciesRelations = relations(competencies, ({ one, many }) => ({
+  group: one(competencyGroups, {
+    fields: [competencies.groupId],
+    references: [competencyGroups.id],
+  }),
+  levels: many(competencyLevels),
+  requirements: many(competencyRequirements),
+  assessmentDetails: many(userAssessmentDetails),
+  idpActivities: many(idpActivities),
+}));
+
+export const competencyLevelsRelations = relations(competencyLevels, ({ one }) => ({
+  competency: one(competencies, {
+    fields: [competencyLevels.competencyId],
+    references: [competencies.id],
+  }),
+}));
+
+export const competencyRequirementsRelations = relations(competencyRequirements, ({ one }) => ({
+  role: one(roles, {
+    fields: [competencyRequirements.roleId],
+    references: [roles.id],
+  }),
+  careerBand: one(careerBands, {
+    fields: [competencyRequirements.careerBandId],
+    references: [careerBands.id],
+  }),
+  competency: one(competencies, {
+    fields: [competencyRequirements.competencyId],
+    references: [competencies.id],
+  }),
+}));
+
+export const assessmentCyclesRelations = relations(assessmentCycles, ({ many }) => ({
+  userAssessments: many(userAssessments),
+}));
+
+export const userAssessmentsRelations = relations(userAssessments, ({ one, many }) => ({
+  user: one(users, {
+    fields: [userAssessments.userId],
+    references: [users.id],
+  }),
+  cycle: one(assessmentCycles, {
+    fields: [userAssessments.cycleId],
+    references: [assessmentCycles.id],
+  }),
+  details: many(userAssessmentDetails),
+  idp: one(individualDevelopmentPlans, {
+    fields: [userAssessments.id],
+    references: [individualDevelopmentPlans.userAssessmentId],
+  }),
+}));
+
+export const userAssessmentDetailsRelations = relations(userAssessmentDetails, ({ one }) => ({
+  userAssessment: one(userAssessments, {
+    fields: [userAssessmentDetails.userAssessmentId],
+    references: [userAssessments.id],
+  }),
+  competency: one(competencies, {
+    fields: [userAssessmentDetails.competencyId],
+    references: [competencies.id],
+  }),
+}));
+
+export const individualDevelopmentPlansRelations = relations(individualDevelopmentPlans, ({ one, many }) => ({
+  user: one(users, {
+    fields: [individualDevelopmentPlans.userId],
+    references: [users.id],
+  }),
+  userAssessment: one(userAssessments, {
+    fields: [individualDevelopmentPlans.userAssessmentId],
+    references: [userAssessments.id],
+  }),
+  activities: many(idpActivities),
+}));
+
+export const idpActivitiesRelations = relations(idpActivities, ({ one }) => ({
+  idp: one(individualDevelopmentPlans, {
+    fields: [idpActivities.idpId],
+    references: [individualDevelopmentPlans.id],
+  }),
+  competency: one(competencies, {
+    fields: [idpActivities.competencyId],
+    references: [competencies.id],
   }),
 }));
 
