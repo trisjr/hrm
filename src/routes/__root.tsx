@@ -6,10 +6,13 @@ import {
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
+import * as React from 'react'
 
 import appCss from '../styles.css?url'
 import AdminLayout from '@/components/layout/admin-layout'
 import { Toaster } from '@/components/ui/sonner.tsx'
+import { useAuthStore } from '@/store/auth.store'
+import { validateTokenFn } from '@/server/validate-token.server'
 
 const publicPaths = ['/login', '/register']
 
@@ -40,8 +43,99 @@ export const Route = createRootRoute({
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   const router = useRouter()
+  const {
+    token,
+    isAuthenticated,
+    isLoading,
+    isInitialized,
+    setAuth,
+    clearAuth,
+    setLoading,
+    setInitialized,
+    isHROrAdmin,
+  } = useAuthStore()
 
-  const isPublicPath = publicPaths.includes(router.state.location.pathname)
+  const currentPath = router.state.location.pathname
+  const isPublicPath = publicPaths.includes(currentPath)
+  const isLoginPath = currentPath === '/login'
+
+  // Initialize auth on mount
+  React.useEffect(() => {
+    const initAuth = async () => {
+      if (isInitialized) return
+
+      setLoading(true)
+
+      // Check if we have a token in storage
+      if (token) {
+        try {
+          // Validate token with server
+          const result = await validateTokenFn({ data: { token } })
+
+          if (result.valid && result.user) {
+            // Token is valid, set auth state
+            setAuth(result.user, token)
+          } else {
+            // Token is invalid, clear auth
+            clearAuth()
+          }
+        } catch (error) {
+          console.error('Auth initialization error:', error)
+          clearAuth()
+        }
+      }
+
+      setLoading(false)
+      setInitialized(true)
+    }
+
+    initAuth()
+  }, [token, isInitialized, setAuth, clearAuth, setLoading, setInitialized])
+
+  // Handle redirects after initialization
+  React.useEffect(() => {
+    if (!isInitialized || isLoading) return
+
+    // Redirect unauthenticated users from protected routes
+    if (!isAuthenticated && !isPublicPath) {
+      router.navigate({ to: '/login' })
+      return
+    }
+
+    // Redirect authenticated users from login page based on role
+    if (isAuthenticated && isLoginPath) {
+      const redirectPath = isHROrAdmin() ? '/admin' : '/'
+      router.navigate({ to: redirectPath })
+    }
+  }, [
+    isInitialized,
+    isLoading,
+    isAuthenticated,
+    isPublicPath,
+    isLoginPath,
+    router,
+    isHROrAdmin,
+  ])
+
+  // Show loading screen during initialization
+  if (!isInitialized || isLoading) {
+    return (
+      <html lang="en">
+        <head>
+          <HeadContent />
+        </head>
+        <body>
+          <div className="flex min-h-screen items-center justify-center">
+            <div className="text-center">
+              <div className="mb-4 inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent motion-reduce:animate-[spin_1.5s_linear_infinite]" />
+              <p className="text-sm text-muted-foreground">Loading...</p>
+            </div>
+          </div>
+          <Scripts />
+        </body>
+      </html>
+    )
+  }
 
   return (
     <html lang="en">
@@ -67,3 +161,4 @@ function RootDocument({ children }: { children: React.ReactNode }) {
     </html>
   )
 }
+

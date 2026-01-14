@@ -12,17 +12,14 @@ export const loginFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }: { data: LoginInput }) => {
     const { email, password } = data
 
-    console.log('TJ - auth.server.ts - line 15', { email, password })
-
     // 1. Find user by email
     const user = await db.query.users.findFirst({
       where: eq(users.email, email),
       with: {
         profile: true,
+        role: true,
       },
     })
-
-    console.log('TJ - auth.server.ts - line 25', { user })
 
     if (!user) {
       throw new Error('Invalid email or password')
@@ -44,6 +41,7 @@ export const loginFn = createServerFn({ method: 'POST' })
       id: user.id,
       email: user.email,
       roleId: user.roleId,
+      roleName: user.role?.roleName,
       teamId: user.teamId,
       careerBandId: user.careerBandId,
       status: user.status!,

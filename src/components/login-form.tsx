@@ -40,12 +40,18 @@ export function LoginForm({
   async function onSubmit(values: LoginInput) {
     try {
       const result = await loginFn({ data: values })
+      
+      // Use auth store instead of localStorage
+      const { login } = await import('@/store/auth.store').then(m => ({ login: m.useAuthStore.getState().login }))
+      login(result.user, result.token)
+      
       toast.success('Login successful')
-      localStorage.setItem('accessToken', result.token)
-      localStorage.setItem('user', JSON.stringify(result.user))
 
-      // Navigate to dashboard or home
-      await router.navigate({ to: '/' })
+      // Redirect based on role
+      const isHROrAdmin = result.user.roleName === 'ADMIN' || result.user.roleName === 'HR'
+      const redirectPath = isHROrAdmin ? '/admin' : '/'
+      
+      await router.navigate({ to: redirectPath })
     } catch (error: any) {
       toast.error('Failed to login')
     }
