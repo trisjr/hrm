@@ -1,7 +1,7 @@
-import { client, db } from './index'
-import { profiles, roles, teams, users } from './schema'
 import { eq } from 'drizzle-orm'
 import bcrypt from 'bcryptjs'
+import { profiles, roles, teams, users } from './schema'
+import { client, db } from './index'
 
 async function seed() {
   console.log('🌱 Starting seed...')

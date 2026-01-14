@@ -1,3 +1,9 @@
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm } from 'react-hook-form'
+import * as React from 'react'
+import { toast } from 'sonner'
+import { useRouter } from '@tanstack/react-router'
+import type {ChangePasswordInput} from '@/lib/auth.schemas';
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -8,8 +14,6 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
 import {
   Form,
   FormControl,
@@ -18,14 +22,11 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
-import * as React from 'react'
 import { changePasswordFn } from '@/server/auth.server'
 import {
-  type ChangePasswordInput,
-  changePasswordSchema,
+  
+  changePasswordSchema
 } from '@/lib/auth.schemas'
-import { toast } from 'sonner'
-import { useRouter } from '@tanstack/react-router'
 import { useAuthStore } from '@/store/auth.store'
 
 export function ChangePasswordForm({

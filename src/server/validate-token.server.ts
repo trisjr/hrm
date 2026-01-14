@@ -1,9 +1,9 @@
 import { createServerFn } from '@tanstack/react-start'
+import { eq } from 'drizzle-orm'
+import type { UserSession } from '@/types/auth.types'
 import { verifyToken } from '@/lib/auth.utils'
 import { db } from '@/db'
 import { users } from '@/db/schema'
-import { eq } from 'drizzle-orm'
-import type { UserSession } from '@/types/auth.types'
 
 interface ValidateTokenResponse {
   valid: boolean
@@ -27,7 +27,7 @@ export const validateTokenFn = createServerFn({ method: 'POST' })
     try {
       // 1. Verify JWT token
       const decoded = verifyToken(token)
-      
+
       if (!decoded) {
         return { valid: false }
       }
@@ -58,7 +58,7 @@ export const validateTokenFn = createServerFn({ method: 'POST' })
         roleName: user.role?.roleName,
         teamId: user.teamId,
         careerBandId: user.careerBandId,
-        status: user.status!,
+        status: user.status,
         fullName: user.profile?.fullName,
         avatarUrl: user.profile?.avatarUrl,
       }

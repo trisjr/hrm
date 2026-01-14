@@ -1,7 +1,7 @@
 'use client'
 
 import {
-  type Icon,
+  
   IconChartBar,
   IconClipboardList,
   IconClock,
@@ -9,8 +9,10 @@ import {
   IconFileText,
   IconMail,
   IconTarget,
-  IconUsers,
+  IconUsers
 } from '@tabler/icons-react'
+import { useNavigate, useRouter } from '@tanstack/react-router'
+import type {Icon} from '@tabler/icons-react';
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -18,7 +20,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
-import { useNavigate, useRouter } from '@tanstack/react-router'
 import { useAuthStore } from '@/store/auth.store'
 
 type RoleName = 'ADMIN' | 'HR' | 'LEADER' | 'DEV'
@@ -27,11 +28,11 @@ interface MenuItem {
   title: string
   url: string
   icon?: Icon
-  roles: RoleName[] // Which roles can see this item
+  roles: Array<RoleName> // Which roles can see this item
 }
 
 // Define all menu items with their role permissions
-const ALL_MENU_ITEMS: MenuItem[] = [
+const ALL_MENU_ITEMS: Array<MenuItem> = [
   // Common items for all authenticated users
   {
     title: 'Dashboard',
@@ -116,7 +117,7 @@ export function NavMain() {
   }
 
   // Filter menu items based on user role
-  const getFilteredMenuItems = (): MenuItem[] => {
+  const getFilteredMenuItems = (): Array<MenuItem> => {
     const userRole = user?.roleName as RoleName | undefined
 
     if (!userRole) {

@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
-import { UserSession } from '../types/auth.types.ts'
+import type { UserSession } from '../types/auth.types.ts'
 
 // --- Constants ---
 const JWT_SECRET =

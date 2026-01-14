@@ -1,9 +1,20 @@
 import { createServerFn } from '@tanstack/react-start'
-import { db } from '@/db'
-import { users } from '../db/schema'
 import { eq } from 'drizzle-orm'
-import { comparePassword, signToken, hashPassword, verifyToken } from '../lib/auth.utils'
-import { type LoginInput, loginSchema, type ChangePasswordInput, changePasswordSchema } from '../lib/auth.schemas'
+import { users } from '../db/schema'
+import {
+  comparePassword,
+  hashPassword,
+  signToken,
+  verifyToken,
+} from '../lib/auth.utils'
+import {
+  
+  
+  changePasswordSchema,
+  loginSchema
+} from '../lib/auth.schemas'
+import type {ChangePasswordInput, LoginInput} from '../lib/auth.schemas';
+import { db } from '@/db'
 
 // @tanstack/start might abstract cookie setting differently, but standard response is fine.
 
@@ -25,9 +36,17 @@ export const loginFn = createServerFn({ method: 'POST' })
       throw new Error('Invalid email or password')
     }
 
-    // 2. Check if user is active
+    // 2. Check if user is active (verify email first)
+    if (user.status === 'INACTIVE') {
+      throw new Error(
+        'Tài khoản chưa được xác thực. Vui lòng kiểm tra email để kích hoạt tài khoản.',
+      )
+    }
+
     if (user.status !== 'ACTIVE') {
-      throw new Error(`Account is ${user.status}. Please contact support.`)
+      throw new Error(
+        `Tài khoản đang ở trạng thái ${user.status}. Vui lòng liên hệ bộ phận hỗ trợ.`,
+      )
     }
 
     // 3. Verify password
@@ -44,7 +63,7 @@ export const loginFn = createServerFn({ method: 'POST' })
       roleName: user.role?.roleName,
       teamId: user.teamId,
       careerBandId: user.careerBandId,
-      status: user.status!,
+      status: user.status,
       fullName: user.profile?.fullName,
       avatarUrl: user.profile?.avatarUrl,
     }
@@ -75,46 +94,50 @@ export const changePasswordFn = createServerFn({ method: 'POST' })
     const validatedData = changePasswordSchema.parse(passwordData)
     return { token, ...validatedData }
   })
-  .handler(async ({ data }: { data: ChangePasswordInput & { token: string } }) => {
-    const { currentPassword, newPassword, token } = data
+  .handler(
+    async ({ data }: { data: ChangePasswordInput & { token: string } }) => {
+      const { currentPassword, newPassword, token } = data
 
-    // 1. Verify token and get user session
-    const userSession = verifyToken(token)
-    if (!userSession || !userSession.id) {
-      throw new Error('Unauthorized: Invalid authentication token')
-    }
+      // 1. Verify token and get user session
+      const userSession = verifyToken(token)
+      if (!userSession || !userSession.id) {
+        throw new Error('Unauthorized: Invalid authentication token')
+      }
 
-    // 2. Find user in database
-    const user = await db.query.users.findFirst({
-      where: eq(users.id, userSession.id),
-    })
-
-    if (!user) {
-      throw new Error('User not found')
-    }
-
-    // 3. Verify current password
-    const isValidPassword = await comparePassword(currentPassword, user.passwordHash)
-    if (!isValidPassword) {
-      throw new Error('Current password is incorrect')
-    }
-
-    // 4. Hash new password
-    const newPasswordHash = await hashPassword(newPassword)
-
-    // 5. Update password in database
-    await db
-      .update(users)
-      .set({
-        passwordHash: newPasswordHash,
-        updatedAt: new Date(),
+      // 2. Find user in database
+      const user = await db.query.users.findFirst({
+        where: eq(users.id, userSession.id),
       })
-      .where(eq(users.id, user.id))
 
-    // 6. Return success response
-    return {
-      success: true,
-      message: 'Password changed successfully',
-    }
-  })
+      if (!user) {
+        throw new Error('User not found')
+      }
 
+      // 3. Verify current password
+      const isValidPassword = await comparePassword(
+        currentPassword,
+        user.passwordHash,
+      )
+      if (!isValidPassword) {
+        throw new Error('Current password is incorrect')
+      }
+
+      // 4. Hash new password
+      const newPasswordHash = await hashPassword(newPassword)
+
+      // 5. Update password in database
+      await db
+        .update(users)
+        .set({
+          passwordHash: newPasswordHash,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, user.id))
+
+      // 6. Return success response
+      return {
+        success: true,
+        message: 'Password changed successfully',
+      }
+    },
+  )
