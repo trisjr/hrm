@@ -1,11 +1,17 @@
-import { HeadContent, Scripts, createRootRoute, useRouter } from '@tanstack/react-router'
+import {
+  createRootRoute,
+  HeadContent,
+  Scripts,
+  useRouter,
+} from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 
 import appCss from '../styles.css?url'
 import AdminLayout from '@/components/layout/admin-layout'
+import { Toaster } from '@/components/ui/sonner.tsx'
 
-const publicPaths = ["/login", "/register"]
+const publicPaths = ['/login', '/register']
 
 export const Route = createRootRoute({
   head: () => ({
@@ -43,15 +49,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        {
-          isPublicPath ? (
-            children
-          ) : (
-            <AdminLayout>
-              {children}
-            </AdminLayout>
-          )
-        }
+        {isPublicPath ? children : <AdminLayout>{children}</AdminLayout>}
+        <Toaster position="top-right" richColors />
         <TanStackDevtools
           config={{
             position: 'bottom-right',

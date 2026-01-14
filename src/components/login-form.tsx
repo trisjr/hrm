@@ -10,7 +10,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
-import { z } from 'zod'
 import {
   Form,
   FormControl,
@@ -20,33 +19,36 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import * as React from 'react'
-
-const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email address.').max(255),
-  password: z
-    .string()
-    .min(6, 'Password must be at least 6 characters.')
-    .max(128),
-})
-
-type LoginValues = z.infer<typeof loginSchema>
+import { loginFn } from '@/server/auth.server'
+import { type LoginInput, loginSchema } from '@/lib/auth.schemas'
+import { toast } from 'sonner'
+import { useRouter } from '@tanstack/react-router'
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<'div'>) {
-  const form = useForm<LoginValues>({
-    resolver: zodResolver(loginSchema as any),
+  const router = useRouter()
+  const form = useForm<LoginInput>({
+    resolver: zodResolver(loginSchema),
     defaultValues: {
       email: '',
       password: '',
     },
   })
 
-  function onSubmit(values: LoginValues) {
-    // Do something with the form values.
-    // ✅ This will be type-safe and validated.
-    console.log(values)
+  async function onSubmit(values: LoginInput) {
+    try {
+      const result = await loginFn({ data: values })
+      toast.success('Login successful')
+      localStorage.setItem('accessToken', result.token)
+      localStorage.setItem('user', JSON.stringify(result.user))
+
+      // Navigate to dashboard or home
+      await router.navigate({ to: '/' })
+    } catch (error: any) {
+      toast.error('Failed to login')
+    }
   }
 
   return (
@@ -95,14 +97,19 @@ export function LoginForm({
                         type="password"
                         {...field}
                         placeholder="**********"
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full">
-                Login
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={form.formState.isSubmitting}
+              >
+                {form.formState.isSubmitting ? 'Logging in...' : 'Login'}
               </Button>
               <div className="text-center text-sm">
                 Don&apos;t have an account?{' '}
