@@ -232,8 +232,8 @@ CREATE INDEX idx_verification_tokens_token ON verification_tokens(token);
 
 ### For Developers
 
-📖 **[API_USERS.md](./API_USERS.md)** - Complete API reference  
-📖 **[IMPLEMENTATION_USERS_API.md](./IMPLEMENTATION_USERS_API.md)** - Implementation details
+📖 **[API_USERS.md](API_USERS.md)** - Complete API reference  
+📖 **[IMPLEMENTATION_USERS_API.md](IMPLEMENTATION_USERS_API.md)** - Implementation details
 
 ### Key Sections
 
