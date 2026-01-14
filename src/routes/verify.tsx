@@ -10,15 +10,15 @@ import {
   Loader2,
   XCircle,
 } from 'lucide-react'
+import { verifyAccountFn } from '@/server/verify.server'
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@workspace/ui/components/Card'
-import { Button } from '@workspace/ui/components/Button'
-import { verifyAccountFn } from '@/server/verify.server'
+} from '@/components/ui/card.tsx'
+import { Button } from '@/components/ui/button.tsx'
 
 export const Route = createFileRoute('/verify')({
   component: VerifyComponent,
