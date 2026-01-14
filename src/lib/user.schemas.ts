@@ -1,12 +1,12 @@
 /**
  * User Management Validation Schemas
- * Sử dụng Zod để validate input data
+ * Using Zod for input data validation
  */
 import { z } from 'zod'
 
 // Profile Schema
 export const profileSchema = z.object({
-  fullName: z.string().min(1, 'Họ tên không được để trống'),
+  fullName: z.string().min(1, 'Full name is required'),
   dob: z.string().optional().nullable(),
   gender: z.string().optional().nullable(),
   idCardNumber: z.string().optional().nullable(),
@@ -21,16 +21,19 @@ export const profileSchema = z.object({
 export const createUserSchema = z.object({
   employeeCode: z
     .string()
-    .min(1, 'Mã nhân viên không được để trống')
-    .regex(/^[A-Z0-9]+$/, 'Mã nhân viên chỉ chứa chữ in hoa và số'),
-  email: z.string().email('Email không hợp lệ'),
+    .min(1, 'Employee code is required')
+    .regex(
+      /^[A-Z0-9]+$/,
+      'Employee code must contain only uppercase letters and numbers',
+    ),
+  email: z.string().email('Invalid email address'),
   phone: z.string().optional(),
   password: z
     .string()
-    .min(8, 'Mật khẩu phải có ít nhất 8 ký tự')
+    .min(8, 'Password must be at least 8 characters')
     .regex(
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-      'Mật khẩu phải chứa chữ hoa, chữ thường và số',
+      'Password must contain uppercase, lowercase, and numbers',
     ),
   roleId: z.number().optional(),
   teamId: z.number().optional(),
@@ -40,7 +43,7 @@ export const createUserSchema = z.object({
 
 // Update User Schema
 export const updateUserSchema = z.object({
-  email: z.string().email('Email không hợp lệ').optional(),
+  email: z.string().email('Invalid email address').optional(),
   phone: z.string().optional(),
   roleId: z.number().optional(),
   teamId: z.number().optional(),
@@ -51,7 +54,7 @@ export const updateUserSchema = z.object({
 
 // Verify Account Schema
 export const verifyAccountSchema = z.object({
-  token: z.string().min(1, 'Token không được để trống'),
+  token: z.string().min(1, 'Token is required'),
 })
 
 // List Users Params Schema

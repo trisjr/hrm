@@ -1,7 +1,6 @@
 'use client'
 
 import {
-  
   IconChartBar,
   IconClipboardList,
   IconClock,
@@ -9,10 +8,10 @@ import {
   IconFileText,
   IconMail,
   IconTarget,
-  IconUsers
+  IconUsers,
 } from '@tabler/icons-react'
 import { useNavigate, useRouter } from '@tanstack/react-router'
-import type {Icon} from '@tabler/icons-react';
+import type { Icon } from '@tabler/icons-react'
 import {
   SidebarGroup,
   SidebarGroupContent,

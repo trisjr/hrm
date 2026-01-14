@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import * as React from 'react'
 import { toast } from 'sonner'
 import { useRouter } from '@tanstack/react-router'
-import type {ChangePasswordInput} from '@/lib/auth.schemas';
+import type { ChangePasswordInput } from '@/lib/auth.schemas'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -23,10 +23,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { changePasswordFn } from '@/server/auth.server'
-import {
-  
-  changePasswordSchema
-} from '@/lib/auth.schemas'
+import { changePasswordSchema } from '@/lib/auth.schemas'
 import { useAuthStore } from '@/store/auth.store'
 
 export function ChangePasswordForm({

@@ -1,23 +1,20 @@
 /**
  * Account Verification Server Functions
- * Xử lý xác thực tài khoản qua email token
+ * Handle account verification via email token
  */
 import { createServerFn } from '@tanstack/react-start'
 import { and, eq, gt, isNull } from 'drizzle-orm'
-import type {VerifyAccountInput} from '@/lib/user.schemas';
+import type { VerifyAccountInput } from '@/lib/user.schemas'
 import { db } from '@/db'
 import { users, verificationTokens } from '@/db/schema'
-import {
-  
-  verifyAccountSchema
-} from '@/lib/user.schemas'
+import { verifyAccountSchema } from '@/lib/user.schemas'
 
 /**
  * Verify Account
- * Xác thực tài khoản user qua token từ email
- * - Validate token còn hiệu lực
- * - Cập nhật user status từ INACTIVE → ACTIVE
- * - Đánh dấu token đã sử dụng
+ * Verify user account via token from email
+ * - Validate token is still valid
+ * - Update user status from INACTIVE → ACTIVE
+ * - Mark token as used
  */
 export const verifyAccountFn = createServerFn({ method: 'POST' })
   .inputValidator((data: unknown) => verifyAccountSchema.parse(data))
@@ -30,7 +27,7 @@ export const verifyAccountFn = createServerFn({ method: 'POST' })
         eq(verificationTokens.token, token),
         eq(verificationTokens.type, 'ACTIVATION'),
         isNull(verificationTokens.deletedAt),
-        gt(verificationTokens.expiresAt, new Date()), // Token chưa hết hạn
+        gt(verificationTokens.expiresAt, new Date()), // Token not expired yet
       ),
       with: {
         user: true,
@@ -39,24 +36,24 @@ export const verifyAccountFn = createServerFn({ method: 'POST' })
 
     // 2. Validate token exists
     if (!verifyToken) {
-      throw new Error('Token không hợp lệ hoặc đã hết hạn')
+      throw new Error('Token is invalid or has expired')
     }
 
     // 3. Check if user exists
     if (!verifyToken.user) {
-      throw new Error('Tài khoản không tồn tại')
+      throw new Error('Account does not exist')
     }
 
     // 4. Check if user is already active
     if (verifyToken.user.status === 'ACTIVE') {
       return {
         success: true,
-        message: 'Tài khoản đã được xác thực trước đó',
+        message: 'Account was already verified previously',
         alreadyVerified: true,
       }
     }
 
-    // 5. Activate user account trong transaction
+    // 5. Activate user account in transaction
     await db.transaction(async (tx) => {
       // Update user status to ACTIVE
       await tx
@@ -78,22 +75,21 @@ export const verifyAccountFn = createServerFn({ method: 'POST' })
 
     return {
       success: true,
-      message:
-        'Xác thực tài khoản thành công. Bạn có thể đăng nhập ngay bây giờ.',
+      message: 'Account verified successfully. You can log in now.',
       alreadyVerified: false,
     }
   })
 
 /**
  * Resend Verification Email
- * Gửi lại email xác  thực (tạo token mới)
- * Hữu ích khi token cũ hết hạn
+ * Resend verification email (create new token)
+ * Useful when old token has expired
  */
 export const resendVerificationFn = createServerFn({ method: 'POST' })
   .inputValidator((data: unknown) => {
     const { email } = data as { email: string }
     if (!email || typeof email !== 'string') {
-      throw new Error('Email không hợp lệ')
+      throw new Error('Invalid email')
     }
     return { email }
   })
@@ -106,19 +102,19 @@ export const resendVerificationFn = createServerFn({ method: 'POST' })
     })
 
     if (!user) {
-      // Không tiết lộ user có tồn tại hay không (security)
+      // Don't reveal if user exists (security)
       return {
         success: true,
-        message: 'Nếu email tồn tại, chúng tôi đã gửi lại email xác thực',
+        message: 'If the email exists, we have resent the verification email',
       }
     }
 
     // 2. Check if user is already active
     if (user.status === 'ACTIVE') {
-      throw new Error('Tài khoản đã được xác thực, vui lòng đăng nhập')
+      throw new Error('Account is already verified, please log in')
     }
 
-    // 3. Invalidate old tokens và tạo token mới
+    // 3. Invalidate old tokens and create new token
     await db.transaction(async (tx) => {
       // Soft delete all old ACTIVATION tokens for this user
       await tx
@@ -148,6 +144,6 @@ export const resendVerificationFn = createServerFn({ method: 'POST' })
 
     return {
       success: true,
-      message: 'Đã gửi lại email xác thực, vui lòng kiểm tra hộp thư',
+      message: 'Verification email has been resent, please check your inbox',
     }
   })

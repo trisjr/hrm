@@ -7,13 +7,8 @@ import {
   signToken,
   verifyToken,
 } from '../lib/auth.utils'
-import {
-  
-  
-  changePasswordSchema,
-  loginSchema
-} from '../lib/auth.schemas'
-import type {ChangePasswordInput, LoginInput} from '../lib/auth.schemas';
+import { changePasswordSchema, loginSchema } from '../lib/auth.schemas'
+import type { ChangePasswordInput, LoginInput } from '../lib/auth.schemas'
 import { db } from '@/db'
 
 // @tanstack/start might abstract cookie setting differently, but standard response is fine.
@@ -39,13 +34,13 @@ export const loginFn = createServerFn({ method: 'POST' })
     // 2. Check if user is active (verify email first)
     if (user.status === 'INACTIVE') {
       throw new Error(
-        'Tài khoản chưa được xác thực. Vui lòng kiểm tra email để kích hoạt tài khoản.',
+        'Account is not verified. Please check your email to activate your account.',
       )
     }
 
     if (user.status !== 'ACTIVE') {
       throw new Error(
-        `Tài khoản đang ở trạng thái ${user.status}. Vui lòng liên hệ bộ phận hỗ trợ.`,
+        `Account status is ${user.status}. Please contact support.`,
       )
     }
 

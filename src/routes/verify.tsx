@@ -1,6 +1,6 @@
 /**
  * Verify Account Page
- * Xác thực tài khoản người dùng qua token từ email
+ * Verify user account via token from email
  */
 import { useEffect, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
@@ -42,7 +42,7 @@ function VerifyComponent() {
     // Auto verify when component mounts
     if (!token) {
       setState('error')
-      setMessage('Token không hợp lệ. Vui lòng kiểm tra lại đường link.')
+      setMessage('Invalid token. Please check the link.')
       return
     }
 
@@ -79,7 +79,7 @@ function VerifyComponent() {
     } catch (error) {
       setState('error')
       setMessage(
-        error instanceof Error ? error.message : 'Đã xảy ra lỗi không xác định',
+        error instanceof Error ? error.message : 'An unknown error occurred',
       )
     }
   }
@@ -98,11 +98,11 @@ function VerifyComponent() {
         {/* Verify Card */}
         <Card>
           <CardHeader className="text-center">
-            <CardTitle>Xác thực tài khoản</CardTitle>
+            <CardTitle>Verify Account</CardTitle>
             <CardDescription>
-              {state === 'loading' && 'Đang xác thực tài khoản của bạn...'}
-              {state === 'success' && 'Xác thực thành công!'}
-              {state === 'error' && 'Xác thực thất bại'}
+              {state === 'loading' && 'Verifying your account...'}
+              {state === 'success' && 'Verification successful!'}
+              {state === 'error' && 'Verification failed'}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-4">
@@ -111,7 +111,7 @@ function VerifyComponent() {
               <>
                 <Loader2 className="text-primary size-16 animate-spin" />
                 <p className="text-muted-foreground text-sm">
-                  Vui lòng đợi trong giây lát...
+                  Please wait a moment...
                 </p>
               </>
             )}
@@ -123,14 +123,14 @@ function VerifyComponent() {
                 <div className="text-center">
                   <p className="text-foreground mb-2 font-medium">{message}</p>
                   <p className="text-muted-foreground text-sm">
-                    Chuyển đến trang đăng nhập sau {countdown} giây...
+                    Redirecting to login page in {countdown} seconds...
                   </p>
                 </div>
                 <Button
                   onClick={() => navigate({ to: '/login' })}
                   className="w-full"
                 >
-                  Đăng nhập ngay
+                  Login Now
                 </Button>
               </>
             )}
@@ -142,7 +142,7 @@ function VerifyComponent() {
                 <div className="text-center">
                   <p className="text-foreground mb-2 font-medium">{message}</p>
                   <p className="text-muted-foreground text-sm">
-                    Token có thể đã hết hạn hoặc không hợp lệ.
+                    Token may have expired or is invalid.
                   </p>
                 </div>
                 <div className="flex w-full flex-col gap-2">
@@ -151,14 +151,14 @@ function VerifyComponent() {
                     variant="default"
                     className="w-full"
                   >
-                    Thử lại
+                    Try Again
                   </Button>
                   <Button
                     onClick={() => navigate({ to: '/login' })}
                     variant="outline"
                     className="w-full"
                   >
-                    Quay lại đăng nhập
+                    Back to Login
                   </Button>
                 </div>
               </>
@@ -168,7 +168,7 @@ function VerifyComponent() {
 
         {/* Help Text */}
         <div className="text-balance text-muted-foreground text-center text-xs">
-          Nếu bạn gặp vấn đề, vui lòng liên hệ{' '}
+          If you encounter any issues, please contact{' '}
           <a
             href="mailto:support@hrm.com"
             className="hover:text-primary underline"

@@ -1,27 +1,28 @@
 /**
  * User Management Server Functions
- * Xử lý CRUD operations cho User với Profile
+ * Handle CRUD operations for User with Profile
  */
 import crypto from 'node:crypto'
 import { createServerFn } from '@tanstack/react-start'
 import { and, desc, eq, isNull, like, or, sql } from 'drizzle-orm'
-import type {CreateUserInput, ListUsersParams, UpdateUserInput} from '@/lib/user.schemas';
+import type {
+  CreateUserInput,
+  ListUsersParams,
+  UpdateUserInput,
+} from '@/lib/user.schemas'
 import { db } from '@/db'
 import { profiles, users, verificationTokens } from '@/db/schema'
 import { hashPassword } from '@/lib/auth.utils'
 import {
-  
-  
-  
   createUserSchema,
   listUsersParamsSchema,
-  updateUserSchema
+  updateUserSchema,
 } from '@/lib/user.schemas'
 
 /**
  * Create User
- * Tạo user mới với profile và verification token
- * Status mặc định là INACTIVE, cần verify email để active
+ * Create new user with profile and verification token
+ * Default status is INACTIVE, requires email verification to activate
  */
 export const createUserFn = createServerFn({ method: 'POST' })
   .inputValidator((data: unknown) => createUserSchema.parse(data))
@@ -33,7 +34,7 @@ export const createUserFn = createServerFn({ method: 'POST' })
       where: eq(users.email, userData.email),
     })
     if (existingEmail) {
-      throw new Error('Email đã tồn tại trong hệ thống')
+      throw new Error('Email already exists in the system')
     }
 
     // Check employee code uniqueness
@@ -41,7 +42,7 @@ export const createUserFn = createServerFn({ method: 'POST' })
       where: eq(users.employeeCode, userData.employeeCode),
     })
     if (existingCode) {
-      throw new Error('Mã nhân viên đã tồn tại trong hệ thống')
+      throw new Error('Employee code already exists in the system')
     }
 
     // Hash password
@@ -55,7 +56,7 @@ export const createUserFn = createServerFn({ method: 'POST' })
         .values({
           ...userData,
           passwordHash,
-          status: 'INACTIVE', // Chưa active, cần verify email
+          status: 'INACTIVE', // Not active yet, requires email verification
         })
         .returning()
 
@@ -105,14 +106,14 @@ export const createUserFn = createServerFn({ method: 'POST' })
           avatarUrl: result.profile.avatarUrl,
         },
       },
-      verifyToken: result.verifyToken, // Trả về để có thể log hoặc gửi email
+      verifyToken: result.verifyToken, // Return to allow logging or email sending
     }
   })
 
 /**
  * List Users
- * Lấy danh sách users với pagination và filtering
- * Bắt buộc include profile data
+ * Get list of users with pagination and filtering
+ * Profile data must be included
  */
 export const listUsersFn = createServerFn({ method: 'GET' })
   .inputValidator((data: unknown) => {
@@ -205,7 +206,7 @@ export const listUsersFn = createServerFn({ method: 'GET' })
 
 /**
  * Get User by ID
- * Lấy thông tin chi tiết một user kèm profile
+ * Get detailed user information with profile
  */
 export const getUserByIdFn = createServerFn({ method: 'GET' })
   .inputValidator((data: unknown) => {
@@ -224,7 +225,7 @@ export const getUserByIdFn = createServerFn({ method: 'GET' })
     })
 
     if (!user) {
-      throw new Error('Không tìm thấy người dùng')
+      throw new Error('User not found')
     }
 
     // Transform response
@@ -250,7 +251,7 @@ export const getUserByIdFn = createServerFn({ method: 'GET' })
 
 /**
  * Update User
- * Cập nhật thông tin user và profile
+ * Update user and profile information
  */
 export const updateUserFn = createServerFn({ method: 'POST' })
   .inputValidator((data: unknown) => {
@@ -269,7 +270,7 @@ export const updateUserFn = createServerFn({ method: 'POST' })
     })
 
     if (!existingUser) {
-      throw new Error('Không tìm thấy người dùng')
+      throw new Error('User not found')
     }
 
     // Check email uniqueness if updating email
@@ -278,7 +279,7 @@ export const updateUserFn = createServerFn({ method: 'POST' })
         where: and(eq(users.email, userData.email), isNull(users.deletedAt)),
       })
       if (emailExists) {
-        throw new Error('Email đã tồn tại trong hệ thống')
+        throw new Error('Email already exists in the system')
       }
     }
 
@@ -319,7 +320,7 @@ export const updateUserFn = createServerFn({ method: 'POST' })
     })
 
     if (!fullUser) {
-      throw new Error('Không tìm thấy người dùng sau khi cập nhật')
+      throw new Error('User not found after update')
     }
 
     // Transform response
@@ -359,7 +360,7 @@ export const deleteUserFn = createServerFn({ method: 'POST' })
     })
 
     if (!existingUser) {
-      throw new Error('Không tìm thấy người dùng')
+      throw new Error('User not found')
     }
 
     // Soft delete
@@ -373,6 +374,6 @@ export const deleteUserFn = createServerFn({ method: 'POST' })
 
     return {
       success: true,
-      message: 'Xóa người dùng thành công',
+      message: 'User deleted successfully',
     }
   })
