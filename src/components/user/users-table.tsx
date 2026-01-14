@@ -8,12 +8,24 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
+import { MoreHorizontal, Pencil, Trash } from 'lucide-react'
 
 interface UsersTableProps {
   users: UserResponse[]
   isLoading?: boolean
   className?: string
+  onEdit?: (user: UserResponse) => void
+  onDelete?: (user: UserResponse) => void
 }
 
 const statusVariants: Record<
@@ -29,7 +41,13 @@ const statusVariants: Record<
   RETIRED: { label: 'Retired', className: 'bg-red-500/10 text-red-700' },
 }
 
-export function UsersTable({ users, isLoading, className }: UsersTableProps) {
+export function UsersTable({
+  users,
+  isLoading,
+  className,
+  onEdit,
+  onDelete,
+}: UsersTableProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -59,6 +77,7 @@ export function UsersTable({ users, isLoading, className }: UsersTableProps) {
               <TableHead className="hidden lg:table-cell">Phone</TableHead>
               <TableHead className="hidden xl:table-cell">Team</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -84,6 +103,31 @@ export function UsersTable({ users, isLoading, className }: UsersTableProps) {
                     {statusVariants[user.status].label}
                   </Badge>
                 </TableCell>
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="h-8 w-8 p-0">
+                        <span className="sr-only">Open menu</span>
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => onEdit?.(user)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="text-red-600 focus:text-red-600"
+                        onClick={() => onDelete?.(user)}
+                      >
+                        <Trash className="mr-2 h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -104,12 +148,37 @@ export function UsersTable({ users, isLoading, className }: UsersTableProps) {
                   {user.employeeCode}
                 </p>
               </div>
-              <Badge
-                variant="secondary"
-                className={statusVariants[user.status].className}
-              >
-                {statusVariants[user.status].label}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge
+                  variant="secondary"
+                  className={statusVariants[user.status].className}
+                >
+                  {statusVariants[user.status].label}
+                </Badge>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="h-8 w-8 p-0">
+                      <span className="sr-only">Open menu</span>
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => onEdit?.(user)}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-red-600 focus:text-red-600"
+                      onClick={() => onDelete?.(user)}
+                    >
+                      <Trash className="mr-2 h-4 w-4" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">

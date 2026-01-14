@@ -36,7 +36,7 @@ function VerifyComponent() {
   const navigate = useNavigate()
   const [state, setState] = useState<VerifyState>('loading')
   const [message, setMessage] = useState('')
-  const [countdown, setCountdown] = useState(5)
+  const [countdown, setCountdown] = useState(10)
 
   useEffect(() => {
     // Auto verify when component mounts
@@ -71,11 +71,6 @@ function VerifyComponent() {
 
       setState('success')
       setMessage(response.message)
-
-      if (response.alreadyVerified) {
-        // Redirect faster if already verified
-        setCountdown(3)
-      }
     } catch (error) {
       setState('error')
       setMessage(

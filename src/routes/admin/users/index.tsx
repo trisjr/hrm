@@ -2,12 +2,24 @@ import * as React from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
 import { Plus, Search } from 'lucide-react'
-import { listUsersFn } from '@/server/users.server'
+import { toast } from 'sonner'
+import { deleteUserFn, listUsersFn } from '@/server/users.server'
 import { UsersTable } from '@/components/user/users-table'
 import { CreateUserDialog } from '@/components/user/create-user-dialog'
+import { EditUserDialog } from '@/components/user/edit-user-dialog'
 import { Pagination } from '@/components/common/pagination'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -16,6 +28,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
+import type { UserResponse } from '@/lib/user.types'
 
 // Search params validation
 const usersSearchSchema = z.object({
@@ -44,6 +57,13 @@ function RouteComponent() {
   const { search } = Route.useSearch()
   const data = Route.useLoaderData()
   const [searchInput, setSearchInput] = React.useState(search)
+  const [selectedUser, setSelectedUser] = React.useState<UserResponse | null>(
+    null,
+  )
+  const [isEditOpen, setIsEditOpen] = React.useState(false)
+  const [userToDelete, setUserToDelete] = React.useState<UserResponse | null>(
+    null,
+  )
 
   const handlePageChange = async (newPage: number) => {
     await navigate({
@@ -62,6 +82,30 @@ function RouteComponent() {
     await navigate({
       search: (prev) => ({ ...prev }),
     })
+  }
+
+  const handleEdit = (user: UserResponse) => {
+    setSelectedUser(user)
+    setIsEditOpen(true)
+  }
+
+  const handleDeleteClick = (user: UserResponse) => {
+    setUserToDelete(user)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!userToDelete) return
+
+    try {
+      await deleteUserFn({ data: { id: String(userToDelete.id) } })
+      toast.success('User deleted successfully')
+      setUserToDelete(null)
+      handleRefresh()
+    } catch (error: any) {
+      toast.error('Failed to delete user', {
+        description: error.message || 'An error occurred',
+      })
+    }
   }
 
   return (
@@ -114,7 +158,11 @@ function RouteComponent() {
       </div>
 
       {/* Users Table */}
-      <UsersTable users={data.users as any} />
+      <UsersTable
+        users={data.users as any}
+        onEdit={handleEdit}
+        onDelete={handleDeleteClick}
+      />
 
       {/* Pagination */}
       {data.pagination.totalPages > 1 && (
@@ -131,6 +179,43 @@ function RouteComponent() {
       <div className="text-center text-sm text-muted-foreground">
         Showing {data.users.length} of {data.pagination.total} users
       </div>
+
+      {/* Edit User Dialog */}
+      <EditUserDialog
+        user={selectedUser}
+        open={isEditOpen}
+        onOpenChange={setIsEditOpen}
+        onSuccess={handleRefresh}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog
+        open={!!userToDelete}
+        onOpenChange={(open) => !open && setUserToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the user
+              account for{' '}
+              <span className="font-semibold text-foreground">
+                {userToDelete?.profile?.fullName || userToDelete?.email}
+              </span>
+              .
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleConfirmDelete}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
