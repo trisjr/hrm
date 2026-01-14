@@ -2,8 +2,8 @@ import { createServerFn } from '@tanstack/react-start'
 import { db } from '@/db'
 import { users } from '../db/schema'
 import { eq } from 'drizzle-orm'
-import { comparePassword, signToken } from '../lib/auth.utils'
-import { type LoginInput, loginSchema } from '../lib/auth.schemas'
+import { comparePassword, signToken, hashPassword, verifyToken } from '../lib/auth.utils'
+import { type LoginInput, loginSchema, type ChangePasswordInput, changePasswordSchema } from '../lib/auth.schemas'
 
 // @tanstack/start might abstract cookie setting differently, but standard response is fine.
 
@@ -61,3 +61,60 @@ export const loginFn = createServerFn({ method: 'POST' })
       token,
     }
   })
+
+export const changePasswordFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: unknown) => {
+    if (typeof data !== 'object' || data === null) {
+      throw new Error('Invalid input')
+    }
+    const { token, ...passwordData } = data as any
+    if (!token || typeof token !== 'string') {
+      throw new Error('Unauthorized: No authentication token provided')
+    }
+    // Validate password data with schema
+    const validatedData = changePasswordSchema.parse(passwordData)
+    return { token, ...validatedData }
+  })
+  .handler(async ({ data }: { data: ChangePasswordInput & { token: string } }) => {
+    const { currentPassword, newPassword, token } = data
+
+    // 1. Verify token and get user session
+    const userSession = verifyToken(token)
+    if (!userSession || !userSession.id) {
+      throw new Error('Unauthorized: Invalid authentication token')
+    }
+
+    // 2. Find user in database
+    const user = await db.query.users.findFirst({
+      where: eq(users.id, userSession.id),
+    })
+
+    if (!user) {
+      throw new Error('User not found')
+    }
+
+    // 3. Verify current password
+    const isValidPassword = await comparePassword(currentPassword, user.passwordHash)
+    if (!isValidPassword) {
+      throw new Error('Current password is incorrect')
+    }
+
+    // 4. Hash new password
+    const newPasswordHash = await hashPassword(newPassword)
+
+    // 5. Update password in database
+    await db
+      .update(users)
+      .set({
+        passwordHash: newPasswordHash,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, user.id))
+
+    // 6. Return success response
+    return {
+      success: true,
+      message: 'Password changed successfully',
+    }
+  })
+

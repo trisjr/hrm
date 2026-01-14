@@ -40,18 +40,15 @@ export function LoginForm({
   async function onSubmit(values: LoginInput) {
     try {
       const result = await loginFn({ data: values })
-      
-      // Use auth store instead of localStorage
-      const { login } = await import('@/store/auth.store').then(m => ({ login: m.useAuthStore.getState().login }))
-      login(result.user, result.token)
-      
-      toast.success('Login successful')
 
-      // Redirect based on role
-      const isHROrAdmin = result.user.roleName === 'ADMIN' || result.user.roleName === 'HR'
-      const redirectPath = isHROrAdmin ? '/admin' : '/'
-      
-      await router.navigate({ to: redirectPath })
+      // Use auth store instead of localStorage
+      const { login } = await import('@/store/auth.store').then((m) => ({
+        login: m.useAuthStore.getState().login,
+      }))
+      login(result.user, result.token)
+
+      toast.success('Login successful')
+      await router.navigate({ to: '/' })
     } catch (error: any) {
       toast.error('Failed to login')
     }
@@ -103,7 +100,6 @@ export function LoginForm({
                         type="password"
                         {...field}
                         placeholder="**********"
-                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
