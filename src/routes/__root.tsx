@@ -14,7 +14,7 @@ import { Toaster } from '@/components/ui/sonner.tsx'
 import { useAuthStore } from '@/store/auth.store'
 import { validateTokenFn } from '@/server/validate-token.server'
 
-const publicPaths = ['/login', '/register']
+const publicPaths = ['/login', '/register', '/change-password']
 
 export const Route = createRootRoute({
   head: () => ({
@@ -161,4 +161,3 @@ function RootDocument({ children }: { children: React.ReactNode }) {
     </html>
   )
 }
-

@@ -1,6 +1,16 @@
 'use client'
 
-import { type Icon } from '@tabler/icons-react'
+import {
+  type Icon,
+  IconChartBar,
+  IconClipboardList,
+  IconClock,
+  IconDashboard,
+  IconFileText,
+  IconMail,
+  IconTarget,
+  IconUsers,
+} from '@tabler/icons-react'
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -9,19 +19,93 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
 import { useNavigate, useRouter } from '@tanstack/react-router'
+import { useAuthStore } from '@/store/auth.store'
 
-export function NavMain({
-  items,
-}: {
-  items: {
-    title: string
-    url: string
-    icon?: Icon
-  }[]
-}) {
+type RoleName = 'ADMIN' | 'HR' | 'LEADER' | 'DEV'
+
+interface MenuItem {
+  title: string
+  url: string
+  icon?: Icon
+  roles: RoleName[] // Which roles can see this item
+}
+
+// Define all menu items with their role permissions
+const ALL_MENU_ITEMS: MenuItem[] = [
+  // Common items for all authenticated users
+  {
+    title: 'Dashboard',
+    url: '/',
+    icon: IconDashboard,
+    roles: ['ADMIN', 'HR', 'LEADER', 'DEV'],
+  },
+
+  // DEV and above: Timesheet & Requests
+  {
+    title: 'Timesheet',
+    url: '/timesheet',
+    icon: IconClock,
+    roles: ['ADMIN', 'HR', 'LEADER', 'DEV'],
+  },
+  {
+    title: 'My Requests',
+    url: '/requests',
+    icon: IconClipboardList,
+    roles: ['ADMIN', 'HR', 'LEADER', 'DEV'],
+  },
+  {
+    title: 'Competency',
+    url: '/competency',
+    icon: IconTarget,
+    roles: ['ADMIN', 'HR', 'LEADER', 'DEV'],
+  },
+
+  // LEADER and above: Team management
+  {
+    title: 'My Team',
+    url: '/team',
+    icon: IconUsers,
+    roles: ['ADMIN', 'HR', 'LEADER'],
+  },
+  {
+    title: 'Team Requests',
+    url: '/team/requests',
+    icon: IconFileText,
+    roles: ['ADMIN', 'HR', 'LEADER'],
+  },
+
+  // ADMIN/HR only: Full admin features
+  {
+    title: 'User Management',
+    url: '/admin/users',
+    icon: IconUsers,
+    roles: ['ADMIN', 'HR'],
+  },
+  {
+    title: 'Analytics',
+    url: '/admin/analytics',
+    icon: IconChartBar,
+    roles: ['ADMIN', 'HR'],
+  },
+  {
+    title: 'Email Templates',
+    url: '/admin/email-templates',
+    icon: IconMail,
+    roles: ['ADMIN', 'HR'],
+  },
+  {
+    title: 'Reports',
+    url: '/admin/reports',
+    icon: IconFileText,
+    roles: ['ADMIN', 'HR'],
+  },
+]
+
+export function NavMain() {
   const router = useRouter()
   const navigate = useNavigate()
   const route = router.state.location
+  const { user } = useAuthStore()
 
   const handleClick = async (url: string) => {
     await navigate({ to: url })
@@ -31,11 +115,25 @@ export function NavMain({
     return route.pathname === url
   }
 
+  // Filter menu items based on user role
+  const getFilteredMenuItems = (): MenuItem[] => {
+    const userRole = user?.roleName as RoleName | undefined
+
+    if (!userRole) {
+      // If no role, show minimal menu
+      return ALL_MENU_ITEMS.filter((item) => item.url === '/')
+    }
+
+    return ALL_MENU_ITEMS.filter((item) => item.roles.includes(userRole))
+  }
+
+  const visibleItems = getFilteredMenuItems()
+
   return (
     <SidebarGroup>
       <SidebarGroupContent className="flex flex-col gap-2">
         <SidebarMenu>
-          {items.map((item) => (
+          {visibleItems.map((item) => (
             <SidebarMenuItem key={item.url}>
               <SidebarMenuButton
                 className="cursor-pointer"
