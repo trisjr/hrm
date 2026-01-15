@@ -8,9 +8,10 @@ import {
   serial,
   text,
   timestamp,
+  uniqueIndex,
   varchar,
 } from 'drizzle-orm/pg-core'
-import { relations } from 'drizzle-orm'
+import { isNull, relations } from 'drizzle-orm'
 
 // --- Enums ---
 export const userStatusEnum = pgEnum('user_status', [
@@ -133,20 +134,31 @@ export const teams = pgTable('teams', {
 })
 
 // --- 1.4 Users ---
-export const users = pgTable('users', {
-  id: serial('id').primaryKey(),
-  employeeCode: varchar('employee_code', { length: 50 }).unique().notNull(),
-  email: varchar('email', { length: 150 }).unique().notNull(),
-  phone: varchar('phone', { length: 20 }),
-  passwordHash: varchar('password_hash', { length: 255 }).notNull(),
-  roleId: integer('role_id').references(() => roles.id),
-  teamId: integer('team_id').references(() => teams.id),
-  careerBandId: integer('career_band_id').references(() => careerBands.id),
-  status: userStatusEnum('status').default('ACTIVE'),
-  createdAt: timestamp('created_at').defaultNow(),
-  updatedAt: timestamp('updated_at').defaultNow(),
-  deletedAt: timestamp('deleted_at'),
-})
+export const users = pgTable(
+  'users',
+  {
+    id: serial('id').primaryKey(),
+    employeeCode: varchar('employee_code', { length: 50 }).notNull(),
+    email: varchar('email', { length: 150 }).notNull(),
+    phone: varchar('phone', { length: 20 }),
+    passwordHash: varchar('password_hash', { length: 255 }).notNull(),
+    roleId: integer('role_id').references(() => roles.id),
+    teamId: integer('team_id').references(() => teams.id),
+    careerBandId: integer('career_band_id').references(() => careerBands.id),
+    status: userStatusEnum('status').default('ACTIVE'),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+    deletedAt: timestamp('deleted_at'),
+  },
+  (table) => ({
+    uniqueEmployeeCode: uniqueIndex('users_employee_code_unique')
+      .on(table.employeeCode)
+      .where(isNull(table.deletedAt)),
+    uniqueEmail: uniqueIndex('users_email_unique')
+      .on(table.email)
+      .where(isNull(table.deletedAt)),
+  }),
+)
 
 // --- Relations for Users/Teams/Roles ---
 export const rolesRelations = relations(roles, ({ many }) => ({

@@ -1,3 +1,9 @@
+---
+trigger: always_on
+glob:
+description: Quy trình Chuyên viên Phân tích Nghiệp vụ (BA) Agent
+---
+
 # Chuyên viên Phân tích Nghiệp vụ (BA) Agent
 
 ## Mô tả Vai trò

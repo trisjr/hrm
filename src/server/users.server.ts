@@ -31,7 +31,7 @@ export const createUserFn = createServerFn({ method: 'POST' })
 
     // Check email uniqueness
     const existingEmail = await db.query.users.findFirst({
-      where: eq(users.email, userData.email),
+      where: and(eq(users.email, userData.email), isNull(users.deletedAt)),
     })
     if (existingEmail) {
       throw new Error('Email already exists in the system')
@@ -39,7 +39,10 @@ export const createUserFn = createServerFn({ method: 'POST' })
 
     // Check employee code uniqueness
     const existingCode = await db.query.users.findFirst({
-      where: eq(users.employeeCode, userData.employeeCode),
+      where: and(
+        eq(users.employeeCode, userData.employeeCode),
+        isNull(users.deletedAt),
+      ),
     })
     if (existingCode) {
       throw new Error('Employee code already exists in the system')

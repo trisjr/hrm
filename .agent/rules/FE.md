@@ -1,3 +1,9 @@
+---
+trigger: always_on
+glob:
+description: Quy trình Lập trình viên Frontend (FE) Agent
+---
+
 # Lập trình viên Frontend (FE) Agent
 
 ## Mô tả Vai trò

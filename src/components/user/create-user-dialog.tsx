@@ -26,6 +26,13 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { DatePicker } from '@/components/common/date-picker'
 import { format } from 'date-fns'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 interface CreateUserDialogProps {
   children: React.ReactNode
@@ -59,13 +66,19 @@ export function CreateUserDialog({
     },
   })
 
+  // Reset form when dialog closes
+  React.useEffect(() => {
+    if (!open) {
+      form.reset()
+    }
+  }, [open, form])
+
   async function onSubmit(values: CreateUserInput) {
     try {
       await createUserFn({ data: values })
       toast.success('User created successfully', {
         description: 'Verification email has been sent to the user.',
       })
-      form.reset()
       setOpen(false)
       onSuccess?.()
     } catch (error: any) {
@@ -229,13 +242,22 @@ export function CreateUserDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Gender</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Male/Female/Other"
-                          {...field}
-                          value={field.value || ''}
-                        />
-                      </FormControl>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value || undefined}
+                        value={field.value || undefined}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select gender" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Male">Male</SelectItem>
+                          <SelectItem value="Female">Female</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}

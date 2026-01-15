@@ -1,3 +1,9 @@
+---
+trigger: always_on
+glob:
+description: Quy trình Kỹ sư Kiểm thử (Tester) Agent
+---
+
 # Kỹ sư Kiểm thử (Tester) Agent
 
 ## Mô tả Vai trò

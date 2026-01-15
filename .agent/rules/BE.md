@@ -1,3 +1,9 @@
+---
+trigger: always_on
+glob:
+description: Quy trình Lập trình viên Backend (BE) Agent
+---
+
 # Lập trình viên Backend (BE) Agent
 
 ## Mô tả Vai trò

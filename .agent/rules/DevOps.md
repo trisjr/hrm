@@ -1,3 +1,9 @@
+---
+trigger: always_on
+glob:
+description: Quy trình Kỹ sư DevOps Agent
+---
+
 # Kỹ sư DevOps Agent
 
 ## Mô tả Vai trò

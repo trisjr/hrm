@@ -1,4 +1,6 @@
 ---
+trigger: always_on
+glob:
 description: Quy trình thảo luận đa tác nhân cho các nhiệm vụ triển khai (Cập nhật tự động hóa & bảo trì tài liệu)
 ---
 
@@ -14,7 +16,7 @@ Quy trình này xử lý các nhiệm vụ phức tạp bằng cách kích hoạ
     - Tự động đề xuất các **Agent Tư vấn** cần thiết để đảm bảo tính toàn diện.
 
 2.  **Nạp Ngữ cảnh Toàn diện (Deep Context Loading)**:
-    - **Context Vai trò**: Agent Chính đọc các file định nghĩa trong `.agent/roles/`.
+    - **Context Vai trò**: Agent Chính đọc các file định nghĩa trong `.agent/rules/`.
     - **Context Dự án**: **BẮT BUỘC** tìm và đọc các tài liệu dự án liên quan (ví dụ: `README.md`, thư mục `docs/`, các file specs hoặc `GEMINI.md`...) để nắm bắt kiến trúc và nghiệp vụ hiện tại.
     - **Context Chất lượng**: Đọc `BA.md` (để hiểu giá trị nghiệp vụ) và `Tester.md` (để lường trước rủi ro).
 

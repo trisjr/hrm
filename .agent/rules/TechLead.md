@@ -1,3 +1,9 @@
+---
+trigger: always_on
+glob:
+description: Quy trình Trưởng nhóm Kỹ thuật (Tech Lead) Agent
+---
+
 # Trưởng nhóm Kỹ thuật (Tech Lead) Agent
 
 ## Mô tả Vai trò

@@ -41,8 +41,8 @@ Quản lý các đơn vị chuyên môn. Leader và Dev sẽ được gắn vào
 Thông tin đăng nhập và định danh cơ bản.
 
 - `id`: INT (PK)
-- `employee_code`: VARCHAR (Unique) - Mã nhân viên.
-- `email`: VARCHAR (Unique) - Email công ty.
+- `employee_code`: VARCHAR (Unique where deleted_at is NULL) - Mã nhân viên.
+- `email`: VARCHAR (Unique where deleted_at is NULL) - Email công ty.
 - `phone`: VARCHAR.
 - `password_hash`: VARCHAR.
 - `role_id`: INT (FK) - Liên kết `roles`.

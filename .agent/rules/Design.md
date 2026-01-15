@@ -1,3 +1,9 @@
+---
+trigger: always_on
+glob:
+description: Quy trình Nhà thiết kế UI/UX (Design) Agent
+---
+
 # Nhà thiết kế UI/UX (Design) Agent
 
 ## Mô tả Vai trò

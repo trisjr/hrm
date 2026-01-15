@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { passwordSchema } from './common-validation'
 
 // --- Schemas ---
 export const loginSchema = z.object({
@@ -15,10 +16,7 @@ export type LoginInput = z.infer<typeof loginSchema>
 export const changePasswordSchema = z
   .object({
     currentPassword: z.string().min(1, 'Current password is required'),
-    newPassword: z
-      .string()
-      .min(6, 'New password must be at least 6 characters.')
-      .max(128),
+    newPassword: passwordSchema,
     confirmPassword: z.string(),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {

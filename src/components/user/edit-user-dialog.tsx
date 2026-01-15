@@ -89,6 +89,13 @@ export function EditUserDialog({
     }
   }, [user, open, form])
 
+  // Reset form when dialog closes
+  React.useEffect(() => {
+    if (!open) {
+      form.reset()
+    }
+  }, [open, form])
+
   async function onSubmit(values: UpdateUserInput) {
     if (!user) return
 
@@ -244,13 +251,22 @@ export function EditUserDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Gender</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Male/Female/Other"
-                          {...field}
-                          value={field.value || ''}
-                        />
-                      </FormControl>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value || undefined}
+                        value={field.value || undefined}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select gender" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Male">Male</SelectItem>
+                          <SelectItem value="Female">Female</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}

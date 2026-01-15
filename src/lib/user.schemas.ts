@@ -3,6 +3,7 @@
  * Using Zod for input data validation
  */
 import { z } from 'zod'
+import { passwordSchema } from './common-validation'
 
 // Profile Schema
 export const profileSchema = z.object({
@@ -28,13 +29,7 @@ export const createUserSchema = z.object({
     ),
   email: z.string().email('Invalid email address'),
   phone: z.string().optional(),
-  password: z
-    .string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-      'Password must contain uppercase, lowercase, and numbers',
-    ),
+  password: passwordSchema,
   roleId: z.number().optional(),
   teamId: z.number().optional(),
   careerBandId: z.number().optional(),

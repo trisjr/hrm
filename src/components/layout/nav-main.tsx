@@ -51,7 +51,7 @@ const ALL_MENU_ITEMS: Array<MenuItem> = [
     title: 'My Requests',
     url: '/requests',
     icon: IconClipboardList,
-    roles: ['ADMIN', 'HR', 'LEADER', 'DEV'],
+    roles: ['LEADER', 'DEV'],
   },
   {
     title: 'Competency',
@@ -65,13 +65,13 @@ const ALL_MENU_ITEMS: Array<MenuItem> = [
     title: 'My Team',
     url: '/team',
     icon: IconUsers,
-    roles: ['ADMIN', 'HR', 'LEADER'],
+    roles: ['LEADER'],
   },
   {
     title: 'Team Requests',
     url: '/team/requests',
     icon: IconFileText,
-    roles: ['ADMIN', 'HR', 'LEADER'],
+    roles: ['LEADER'],
   },
 
   // ADMIN/HR only: Full admin features
@@ -118,6 +118,8 @@ export function NavMain() {
   // Filter menu items based on user role
   const getFilteredMenuItems = (): Array<MenuItem> => {
     const userRole = user?.roleName as RoleName | undefined
+
+    console.log(userRole)
 
     if (!userRole) {
       // If no role, show minimal menu
