@@ -661,6 +661,7 @@ export const workRequests = pgTable('work_requests', {
   type: requestTypeEnum('type').notNull(),
   startDate: timestamp('start_date').notNull(),
   endDate: timestamp('end_date').notNull(),
+  isHalfDay: boolean('is_half_day').default(false),
   reason: text('reason'),
   approverId: integer('approver_id').references(() => users.id),
   status: requestStatusEnum('status').default('PENDING'),
