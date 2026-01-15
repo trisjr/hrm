@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
 import { Plus, Search } from 'lucide-react'
 import { toast } from 'sonner'
@@ -23,7 +23,6 @@ import {
 import {
   Breadcrumb,
   BreadcrumbItem,
-  BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
@@ -114,7 +113,18 @@ function RouteComponent() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+            <Link to="/" className="hover:text-foreground transition-colors">
+              Home
+            </Link>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <Link
+              to="/admin"
+              className="hover:text-foreground transition-colors"
+            >
+              Admin
+            </Link>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
@@ -197,8 +207,8 @@ function RouteComponent() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the user
-              account for{' '}
+              This action cannot be undone. This will permanently delete the
+              user account for{' '}
               <span className="font-semibold text-foreground">
                 {userToDelete?.profile?.fullName || userToDelete?.email}
               </span>

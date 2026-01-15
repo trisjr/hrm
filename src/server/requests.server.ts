@@ -3,17 +3,21 @@
  * Handle CRUD operations for Work Requests (Leave, WFH, etc.)
  */
 import { createServerFn } from '@tanstack/react-start'
-import { and, desc, eq, inArray, isNull, ne } from 'drizzle-orm'
+import { and, desc, eq, inArray, isNull } from 'drizzle-orm'
 import { z } from 'zod'
 import type {
   ApproveRequestInput,
+  CancelRequestInput,
   CreateRequestInput,
   RejectRequestInput,
+  UpdateRequestInput,
 } from '@/lib/request.schemas'
 import {
   approveRequestSchema,
+  cancelRequestSchema,
   createRequestSchema,
   rejectRequestSchema,
+  updateRequestSchema,
 } from '@/lib/request.schemas'
 import { db } from '@/db'
 import { users, workRequests } from '@/db/schema'
@@ -44,10 +48,13 @@ async function canApproveRequest(
   }
 
   // Request must be PENDING
-  if (request.status !== 'PENDING') {
+  if (!request.status || request.status !== 'PENDING') {
+    const statusMsg = request.status
+      ? request.status.toLowerCase()
+      : 'processed'
     return {
       canApprove: false,
-      reason: `Request is already ${request.status.toLowerCase()}`,
+      reason: `Request is already ${statusMsg}`,
     }
   }
 
@@ -401,6 +408,146 @@ export const rejectRequestFn = createServerFn({ method: 'POST' })
       return {
         success: true,
         message: 'Request rejected successfully',
+      }
+    },
+  )
+
+/**
+ * Update Request
+ * Update a pending work request (only owner can edit)
+ */
+export const updateRequestFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: unknown) => {
+    return z
+      .object({
+        token: z.string(),
+        data: updateRequestSchema,
+      })
+      .parse(data)
+  })
+  .handler(
+    async ({
+      data: input,
+    }: {
+      data: { token: string; data: UpdateRequestInput }
+    }) => {
+      const { token, data: updateData } = input
+
+      // Authentication
+      const userSession = verifyToken(token)
+      if (!userSession || !userSession.id) {
+        throw new Error('Unauthorized: Invalid authentication token')
+      }
+
+      // Get request to check ownership and status
+      const request = await db.query.workRequests.findFirst({
+        where: and(
+          eq(workRequests.id, updateData.requestId),
+          isNull(workRequests.deletedAt),
+        ),
+      })
+
+      if (!request) {
+        throw new Error('Request not found')
+      }
+
+      // Only owner can edit
+      if (request.userId !== userSession.id) {
+        throw new Error('Permission denied: Only request owner can edit')
+      }
+
+      // Only PENDING requests can be edited
+      if (!request.status || request.status !== 'PENDING') {
+        const statusMsg = request.status
+          ? request.status.toLowerCase()
+          : 'processed'
+        throw new Error(`Cannot edit request that is already ${statusMsg}`)
+      }
+
+      // Update request
+      await db
+        .update(workRequests)
+        .set({
+          type: updateData.data.type,
+          startDate: updateData.data.startDate,
+          endDate: updateData.data.endDate,
+          isHalfDay: updateData.data.isHalfDay,
+          reason: updateData.data.reason,
+          updatedAt: new Date(),
+        })
+        .where(eq(workRequests.id, updateData.requestId))
+
+      return {
+        success: true,
+        message: 'Request updated successfully',
+      }
+    },
+  )
+
+/**
+ * Cancel Request
+ * Soft delete a pending work request (only owner can cancel)
+ */
+export const cancelRequestFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: unknown) => {
+    return z
+      .object({
+        token: z.string(),
+        data: cancelRequestSchema,
+      })
+      .parse(data)
+  })
+  .handler(
+    async ({
+      data: input,
+    }: {
+      data: { token: string; data: CancelRequestInput }
+    }) => {
+      const { token, data: cancelData } = input
+
+      // Authentication
+      const userSession = verifyToken(token)
+      if (!userSession || !userSession.id) {
+        throw new Error('Unauthorized: Invalid authentication token')
+      }
+
+      // Get request to check ownership and status
+      const request = await db.query.workRequests.findFirst({
+        where: and(
+          eq(workRequests.id, cancelData.requestId),
+          isNull(workRequests.deletedAt),
+        ),
+      })
+
+      if (!request) {
+        throw new Error('Request not found')
+      }
+
+      // Only owner can cancel
+      if (request.userId !== userSession.id) {
+        throw new Error('Permission denied: Only request owner can cancel')
+      }
+
+      // Only PENDING requests can be cancelled
+      if (!request.status || request.status !== 'PENDING') {
+        const statusMsg = request.status
+          ? request.status.toLowerCase()
+          : 'processed'
+        throw new Error(`Cannot cancel request that is already ${statusMsg}`)
+      }
+
+      // Soft delete
+      await db
+        .update(workRequests)
+        .set({
+          deletedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(workRequests.id, cancelData.requestId))
+
+      return {
+        success: true,
+        message: 'Request cancelled successfully',
       }
     },
   )

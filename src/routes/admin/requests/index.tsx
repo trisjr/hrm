@@ -1,13 +1,15 @@
 import * as React from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import {
-  createRequestFn,
-  getRequestsSentFn,
-  getRequestsReceivedFn,
   approveRequestFn,
+  cancelRequestFn,
+  createRequestFn,
+  getRequestsReceivedFn,
+  getRequestsSentFn,
   rejectRequestFn,
+  updateRequestFn,
 } from '@/server/requests.server'
 import { useAuthStore } from '@/store/auth.store'
 import type { CreateRequestInput, RequestResponse } from '@/lib/request.schemas'
@@ -18,11 +20,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Breadcrumb,
   BreadcrumbItem,
-  BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { format } from 'date-fns'
 
 export const Route = createFileRoute('/admin/requests/')({
   component: RouteComponent,
@@ -31,6 +43,12 @@ export const Route = createFileRoute('/admin/requests/')({
 function RouteComponent() {
   const { token } = useAuthStore()
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
+  const [editRequest, setEditRequest] = React.useState<RequestResponse | null>(
+    null,
+  )
+  const [requestToCancel, setRequestToCancel] = React.useState<number | null>(
+    null,
+  )
   const [sentRequests, setSentRequests] = React.useState<RequestResponse[]>([])
   const [receivedRequests, setReceivedRequests] = React.useState<
     RequestResponse[]
@@ -64,27 +82,83 @@ function RouteComponent() {
     fetchData()
   }, [fetchData])
 
-  // Create request
-  const handleCreateRequest = async (data: CreateRequestInput) => {
+  // Create or update request
+  const handleSubmitRequest = async (data: CreateRequestInput) => {
     if (!token) {
       toast.error('Authentication required')
       return
     }
 
     try {
-      await createRequestFn({
+      if (editRequest) {
+        await updateRequestFn({
+          data: {
+            token,
+            data: {
+              requestId: editRequest.id,
+              data,
+            },
+          },
+        })
+        toast.success('Request updated successfully')
+      } else {
+        await createRequestFn({
+          data: {
+            token,
+            data,
+          },
+        })
+        toast.success('Request submitted successfully')
+      }
+      fetchData() // Refresh data
+      setEditRequest(null) // Clear edit state
+      setIsDialogOpen(false) // Close dialog
+    } catch (error: any) {
+      toast.error(
+        editRequest ? 'Failed to update request' : 'Failed to create request',
+        {
+          description: error.message || 'An error occurred',
+        },
+      )
+      throw error // Re-throw to prevent dialog from closing
+    }
+  }
+
+  // Edit request
+  const handleEdit = (request: RequestResponse) => {
+    setEditRequest(request)
+    setIsDialogOpen(true)
+  }
+
+  // Cancel request click
+  const handleCancelClick = async (requestId: number) => {
+    setRequestToCancel(requestId)
+  }
+
+  // Find request to cancel for display
+  const targetRequest = React.useMemo(
+    () => sentRequests.find((r) => r.id === requestToCancel),
+    [sentRequests, requestToCancel],
+  )
+
+  // Confirm cancel
+  const handleConfirmCancel = async () => {
+    if (!token || !requestToCancel) return
+
+    try {
+      await cancelRequestFn({
         data: {
           token,
-          data,
+          data: { requestId: requestToCancel },
         },
       })
-      toast.success('Request submitted successfully')
+      toast.success('Request cancelled successfully')
       fetchData() // Refresh data
+      setRequestToCancel(null)
     } catch (error: any) {
-      toast.error('Failed to create request', {
+      toast.error('Failed to cancel request', {
         description: error.message || 'An error occurred',
       })
-      throw error // Re-throw to prevent dialog from closing
     }
   }
 
@@ -142,7 +216,18 @@ function RouteComponent() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+            <Link to="/" className="hover:text-foreground transition-colors">
+              Home
+            </Link>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <Link
+              to="/admin"
+              className="hover:text-foreground transition-colors"
+            >
+              Admin
+            </Link>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
@@ -193,17 +278,56 @@ function RouteComponent() {
           <RequestsTable
             mode="sent"
             data={sentRequests}
+            onEdit={handleEdit}
+            onCancel={handleCancelClick}
             isLoading={isLoading}
           />
         </TabsContent>
       </Tabs>
 
-      {/* Create Request Dialog */}
+      {/* Create/Edit Request Dialog */}
       <RequestDialog
         open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-        onSubmit={handleCreateRequest}
+        onOpenChange={(open) => {
+          setIsDialogOpen(open)
+          if (!open) setEditRequest(null)
+        }}
+        onSubmit={handleSubmitRequest}
+        editRequest={editRequest}
       />
+
+      {/* Cancel Confirmation Dialog */}
+      <AlertDialog
+        open={!!requestToCancel}
+        onOpenChange={(open) => !open && setRequestToCancel(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently cancel your{' '}
+              <span className="font-semibold text-foreground">
+                {targetRequest?.type}
+              </span>{' '}
+              request for{' '}
+              <span className="font-semibold text-foreground">
+                {targetRequest?.startDate &&
+                  format(new Date(targetRequest.startDate), 'MMM dd, yyyy')}
+              </span>
+              .
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep it</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleConfirmCancel}
+            >
+              Yes, Cancel Request
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

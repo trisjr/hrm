@@ -62,6 +62,21 @@ export const rejectRequestSchema = z.object({
 
 export type RejectRequestInput = z.infer<typeof rejectRequestSchema>
 
+// Update Request Schema
+export const updateRequestSchema = z.object({
+  requestId: z.number().int().positive(),
+  data: createRequestSchema,
+})
+
+export type UpdateRequestInput = z.infer<typeof updateRequestSchema>
+
+// Cancel Request Schema
+export const cancelRequestSchema = z.object({
+  requestId: z.number().int().positive(),
+})
+
+export type CancelRequestInput = z.infer<typeof cancelRequestSchema>
+
 // Request Response Type (for display)
 export const requestResponseSchema = z.object({
   id: z.number(),

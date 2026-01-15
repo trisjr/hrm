@@ -16,13 +16,15 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { StatusBadge } from './status-badge'
 import { RequestTypeChip } from './request-type-chip'
 import { ApprovalDialog } from './approval-dialog'
-import { Check, X } from 'lucide-react'
+import { Check, Edit2, Trash2, X } from 'lucide-react'
 
 interface RequestsTableProps {
   mode: 'sent' | 'received'
   data: RequestResponse[]
   onApprove?: (requestId: number) => Promise<void>
   onReject?: (requestId: number, reason: string) => Promise<void>
+  onEdit?: (request: RequestResponse) => void
+  onCancel?: (requestId: number) => Promise<void>
   isLoading?: boolean
 }
 
@@ -31,6 +33,8 @@ export function RequestsTable({
   data,
   onApprove,
   onReject,
+  onEdit,
+  onCancel,
   isLoading = false,
 }: RequestsTableProps) {
   const [approvalDialog, setApprovalDialog] = useState<{
@@ -109,7 +113,7 @@ export function RequestsTable({
               <TableHead>Status</TableHead>
               {mode === 'sent' && <TableHead>Approver</TableHead>}
               <TableHead>Created</TableHead>
-              {mode === 'received' && <TableHead className="text-right">Actions</TableHead>}
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -198,29 +202,51 @@ export function RequestsTable({
                   </div>
                 </TableCell>
 
-                {/* Actions (for received mode) */}
-                {mode === 'received' && (
-                  <TableCell className="text-right">
-                    <div className="flex justify-end space-x-2">
-                      <Button
-                        size="sm"
-                        variant="default"
-                        onClick={() => handleApproveClick(request.id)}
-                      >
-                        <Check className="h-4 w-4 mr-1" />
-                        Approve
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleRejectClick(request.id)}
-                      >
-                        <X className="h-4 w-4 mr-1" />
-                        Reject
-                      </Button>
-                    </div>
-                  </TableCell>
-                )}
+                {/* Actions */}
+                <TableCell className="text-right">
+                  <div className="flex justify-end space-x-2">
+                    {mode === 'sent' && request.status === 'PENDING' && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onEdit?.(request)}
+                        >
+                          <Edit2 className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => onCancel?.(request.id)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Cancel
+                        </Button>
+                      </>
+                    )}
+                    {mode === 'received' && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="default"
+                          onClick={() => handleApproveClick(request.id)}
+                        >
+                          <Check className="h-4 w-4 mr-1" />
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleRejectClick(request.id)}
+                        >
+                          <X className="h-4 w-4 mr-1" />
+                          Reject
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

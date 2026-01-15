@@ -1,9 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import type { CreateRequestInput } from '@/lib/request.schemas'
+import type {
+  CreateRequestInput,
+  RequestResponse,
+} from '@/lib/request.schemas'
 import { createRequestSchema } from '@/lib/request.schemas'
 import {
   Dialog,
@@ -39,14 +42,17 @@ interface RequestDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSubmit: (data: CreateRequestInput) => Promise<void>
+  editRequest?: RequestResponse | null
 }
 
 export function RequestDialog({
   open,
   onOpenChange,
   onSubmit,
+  editRequest,
 }: RequestDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const isEditMode = !!editRequest
 
   const form = useForm<CreateRequestInput>({
     resolver: zodResolver(createRequestSchema),
@@ -58,6 +64,28 @@ export function RequestDialog({
       reason: '',
     },
   })
+
+  // Populate form when editing
+  useEffect(() => {
+    if (editRequest && open) {
+      form.reset({
+        type: editRequest.type,
+        startDate: new Date(editRequest.startDate),
+        endDate: new Date(editRequest.endDate),
+        isHalfDay: editRequest.isHalfDay,
+        reason: editRequest.reason || '',
+      })
+    } else if (!open) {
+      // Reset form when dialog closes
+      form.reset({
+        type: 'LEAVE',
+        startDate: new Date(),
+        endDate: new Date(),
+        isHalfDay: false,
+        reason: '',
+      })
+    }
+  }, [editRequest, open, form])
 
   const isHalfDay = form.watch('isHalfDay')
   const startDate = form.watch('startDate')
@@ -97,9 +125,13 @@ export function RequestDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-125">
         <DialogHeader>
-          <DialogTitle>Create New Request</DialogTitle>
+          <DialogTitle>
+            {isEditMode ? 'Edit Request' : 'Create New Request'}
+          </DialogTitle>
           <DialogDescription>
-            Submit a request for leave, work from home, or other arrangements.
+            {isEditMode
+              ? 'Update your request details below.'
+              : 'Submit a request for leave, work from home, or other arrangements.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -243,7 +275,7 @@ export function RequestDialog({
                 {isSubmitting && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                Submit Request
+                {isEditMode ? 'Update Request' : 'Submit Request'}
               </Button>
             </DialogFooter>
           </form>
