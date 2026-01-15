@@ -10,6 +10,7 @@ import {
   IconMail,
   IconTarget,
   IconUsers,
+  IconUserEdit,
 } from '@tabler/icons-react'
 import { useNavigate, useRouter } from '@tanstack/react-router'
 import {
@@ -85,6 +86,12 @@ const ALL_MENU_ITEMS: Array<MenuItem> = [
     title: 'Request Management',
     url: '/admin/requests',
     icon: IconClipboardList,
+    roles: ['ADMIN', 'HR'],
+  },
+  {
+    title: 'Profile Requests',
+    url: '/admin/profile-requests',
+    icon: IconUserEdit,
     roles: ['ADMIN', 'HR'],
   },
   {

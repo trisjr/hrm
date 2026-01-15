@@ -28,20 +28,7 @@ export const createEmailTemplateSchema = z.object({
 })
 
 // Update Email Template Schema (code and isSystem are immutable)
-export const updateEmailTemplateSchema = z.object({
-  name: z
-    .string()
-    .min(1, 'Template name is required')
-    .max(200, 'Template name must not exceed 200 characters')
-    .optional(),
-  subject: z
-    .string()
-    .min(1, 'Subject is required')
-    .max(255, 'Subject must not exceed 255 characters')
-    .optional(),
-  body: z.string().min(1, 'Email body is required').optional(),
-  variables: z.string().optional(),
-})
+export const updateEmailTemplateSchema = createEmailTemplateSchema
 
 // List Email Templates Params Schema
 export const listEmailTemplatesParamsSchema = z.object({

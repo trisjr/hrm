@@ -18,6 +18,7 @@ import { Route as RequestsIndexRouteImport } from './routes/requests/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminUsersIndexRouteImport } from './routes/admin/users/index'
 import { Route as AdminRequestsIndexRouteImport } from './routes/admin/requests/index'
+import { Route as AdminProfileRequestsIndexRouteImport } from './routes/admin/profile-requests/index'
 import { Route as AdminEmailTemplatesIndexRouteImport } from './routes/admin/email-templates/index'
 
 const VerifyRoute = VerifyRouteImport.update({
@@ -65,6 +66,12 @@ const AdminRequestsIndexRoute = AdminRequestsIndexRouteImport.update({
   path: '/admin/requests/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminProfileRequestsIndexRoute =
+  AdminProfileRequestsIndexRouteImport.update({
+    id: '/admin/profile-requests/',
+    path: '/admin/profile-requests/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AdminEmailTemplatesIndexRoute =
   AdminEmailTemplatesIndexRouteImport.update({
     id: '/admin/email-templates/',
@@ -81,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminIndexRoute
   '/requests': typeof RequestsIndexRoute
   '/admin/email-templates': typeof AdminEmailTemplatesIndexRoute
+  '/admin/profile-requests': typeof AdminProfileRequestsIndexRoute
   '/admin/requests': typeof AdminRequestsIndexRoute
   '/admin/users': typeof AdminUsersIndexRoute
 }
@@ -93,6 +101,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/requests': typeof RequestsIndexRoute
   '/admin/email-templates': typeof AdminEmailTemplatesIndexRoute
+  '/admin/profile-requests': typeof AdminProfileRequestsIndexRoute
   '/admin/requests': typeof AdminRequestsIndexRoute
   '/admin/users': typeof AdminUsersIndexRoute
 }
@@ -106,6 +115,7 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/requests/': typeof RequestsIndexRoute
   '/admin/email-templates/': typeof AdminEmailTemplatesIndexRoute
+  '/admin/profile-requests/': typeof AdminProfileRequestsIndexRoute
   '/admin/requests/': typeof AdminRequestsIndexRoute
   '/admin/users/': typeof AdminUsersIndexRoute
 }
@@ -120,6 +130,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/requests'
     | '/admin/email-templates'
+    | '/admin/profile-requests'
     | '/admin/requests'
     | '/admin/users'
   fileRoutesByTo: FileRoutesByTo
@@ -132,6 +143,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/requests'
     | '/admin/email-templates'
+    | '/admin/profile-requests'
     | '/admin/requests'
     | '/admin/users'
   id:
@@ -144,6 +156,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/requests/'
     | '/admin/email-templates/'
+    | '/admin/profile-requests/'
     | '/admin/requests/'
     | '/admin/users/'
   fileRoutesById: FileRoutesById
@@ -157,6 +170,7 @@ export interface RootRouteChildren {
   AdminIndexRoute: typeof AdminIndexRoute
   RequestsIndexRoute: typeof RequestsIndexRoute
   AdminEmailTemplatesIndexRoute: typeof AdminEmailTemplatesIndexRoute
+  AdminProfileRequestsIndexRoute: typeof AdminProfileRequestsIndexRoute
   AdminRequestsIndexRoute: typeof AdminRequestsIndexRoute
   AdminUsersIndexRoute: typeof AdminUsersIndexRoute
 }
@@ -226,6 +240,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRequestsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/profile-requests/': {
+      id: '/admin/profile-requests/'
+      path: '/admin/profile-requests'
+      fullPath: '/admin/profile-requests'
+      preLoaderRoute: typeof AdminProfileRequestsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/email-templates/': {
       id: '/admin/email-templates/'
       path: '/admin/email-templates'
@@ -245,6 +266,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminIndexRoute: AdminIndexRoute,
   RequestsIndexRoute: RequestsIndexRoute,
   AdminEmailTemplatesIndexRoute: AdminEmailTemplatesIndexRoute,
+  AdminProfileRequestsIndexRoute: AdminProfileRequestsIndexRoute,
   AdminRequestsIndexRoute: AdminRequestsIndexRoute,
   AdminUsersIndexRoute: AdminUsersIndexRoute,
 }

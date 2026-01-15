@@ -3,6 +3,7 @@ import {
   getMyEducationExperienceFn,
   getMyProfileFn,
 } from '@/server/profile.server'
+import { getMyPendingProfileRequestFn } from '@/server/profile-request.server'
 import { useAuthStore } from '@/store/auth.store'
 import { EducationExperienceList } from '@/components/profile/education-experience-list'
 import { ProfileLayout } from '@/components/profile/profile-layout'
@@ -17,11 +18,17 @@ export const Route = createFileRoute('/profile')({
     }
 
     try {
-      const [profileRes, eduRes] = await Promise.all([
+      const [profileRes, eduRes, pendingReqRes] = await Promise.all([
         getMyProfileFn({ data: { token } }),
         getMyEducationExperienceFn({ data: { token } }),
-      ])
-      return { user: profileRes.user, educationExperience: eduRes.items }
+        getMyPendingProfileRequestFn({ data: { token } }),
+      ]) as [any, any, { request: { status: 'PENDING' | 'APPROVED' | 'REJECTED' | null } | undefined | null }]
+
+      return {
+        user: profileRes.user,
+        educationExperience: eduRes.items,
+        pendingRequest: pendingReqRes.request,
+      }
     } catch (error) {
       console.error('Failed to load profile', error)
       // Potentially redirect to login if unauthorized
@@ -32,11 +39,13 @@ export const Route = createFileRoute('/profile')({
 })
 
 function RouteComponent() {
-  const { user, educationExperience } = Route.useLoaderData()
+  const { user, educationExperience, pendingRequest } = Route.useLoaderData()
 
   return (
     <ProfileLayout
-      sidebar={<UserInfoSidebar user={user} />}
+      sidebar={
+        <UserInfoSidebar user={user} pendingRequest={pendingRequest} />
+      }
       content={<EducationExperienceList items={educationExperience} />}
     />
   )

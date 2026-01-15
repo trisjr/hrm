@@ -4,6 +4,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge.tsx'
+import { Button } from '@/components/ui/button'
+import { Edit2, AlertTriangle } from 'lucide-react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { ProfileEditDialog } from './profile-edit-dialog'
+import { useState } from 'react'
 
 interface UserInfoSidebarProps {
   user: {
@@ -18,15 +23,21 @@ interface UserInfoSidebarProps {
       dob?: string | null
       gender?: string | null
       joinDate?: string | null
+      unionJoinDate?: string | null
+      unionPosition?: string | null
       idCardNumber?: string | null
     } | null
     careerBand?: {
       title: string
     } | null
   }
+  pendingRequest?: {
+    status: 'PENDING' | 'APPROVED' | 'REJECTED' | null
+  } | null
 }
 
-export function UserInfoSidebar({ user }: UserInfoSidebarProps) {
+export function UserInfoSidebar({ user, pendingRequest }: UserInfoSidebarProps) {
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const { profile, employeeCode, email, phone, careerBand } = user
   const initials =
     profile?.fullName
@@ -60,14 +71,50 @@ export function UserInfoSidebar({ user }: UserInfoSidebarProps) {
         </p>
         <Badge
           variant="secondary"
-          className="bg-blue-500 text-white dark:bg-blue-600"
+          className="bg-blue-500 text-white dark:bg-blue-600 mb-4"
         >
           {careerBand?.title ||
             user.role?.roleName
               .toLowerCase()
               .replace(/\b\w/g, (l) => l.toUpperCase())}
         </Badge>
+
+        {pendingRequest ? (
+          <Alert className="border-yellow-500/50 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400">
+            <AlertTriangle className="h-4 w-4 stroke-yellow-600 dark:stroke-yellow-400" />
+            <AlertTitle>Update Pending</AlertTitle>
+            <AlertDescription>
+              Your profile update request is waiting for approval.
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={() => setIsEditDialogOpen(true)}
+          >
+            <Edit2 className="mr-2 h-4 w-4" />
+            Edit Profile
+          </Button>
+        )}
       </div>
+
+      <ProfileEditDialog
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        currentUser={{
+          fullName: profile?.fullName || '',
+          dob: profile?.dob,
+          gender: profile?.gender,
+          idCardNumber: profile?.idCardNumber,
+          address: profile?.address,
+          joinDate: profile?.joinDate,
+          unionJoinDate: profile?.unionJoinDate,
+          unionPosition: profile?.unionPosition,
+          avatarUrl: profile?.avatarUrl,
+        }}
+      />
 
       <Separator />
 
