@@ -1,8 +1,8 @@
+import { Briefcase, Calendar, Hash, Mail, MapPin, Phone } from 'lucide-react'
+import { format } from 'date-fns'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 import { Separator } from '@/components/ui/separator'
-import { Briefcase, Calendar, Hash, Mail, MapPin, Phone } from 'lucide-react'
-import { format } from 'date-fns'
 import { Badge } from '@/components/ui/badge.tsx'
 
 interface UserInfoSidebarProps {

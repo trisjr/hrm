@@ -1,7 +1,9 @@
 import * as React from 'react'
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { Link, createFileRoute } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
 import { toast } from 'sonner'
+import { format } from 'date-fns'
+import type { CreateRequestInput, RequestResponse } from '@/lib/request.schemas'
 import {
   approveRequestFn,
   cancelRequestFn,
@@ -12,7 +14,6 @@ import {
   updateRequestFn,
 } from '@/server/requests.server'
 import { useAuthStore } from '@/store/auth.store'
-import type { CreateRequestInput, RequestResponse } from '@/lib/request.schemas'
 import { RequestsTable } from '@/components/requests/requests-table'
 import { RequestDialog } from '@/components/requests/request-dialog'
 import { Button } from '@/components/ui/button'
@@ -34,7 +35,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { format } from 'date-fns'
 
 export const Route = createFileRoute('/admin/requests/')({
   component: RouteComponent,
@@ -49,9 +49,9 @@ function RouteComponent() {
   const [requestToCancel, setRequestToCancel] = React.useState<number | null>(
     null,
   )
-  const [sentRequests, setSentRequests] = React.useState<RequestResponse[]>([])
+  const [sentRequests, setSentRequests] = React.useState<Array<RequestResponse>>([])
   const [receivedRequests, setReceivedRequests] = React.useState<
-    RequestResponse[]
+    Array<RequestResponse>
   >([])
   const [isLoading, setIsLoading] = React.useState(true)
 

@@ -4,6 +4,7 @@ import { format } from 'date-fns'
 import { MoreHorizontal, Pencil, Plus, Trash } from 'lucide-react'
 import { toast } from 'sonner'
 
+import type { CreateEducationExperienceInput } from '@/lib/profile.schemas'
 import { EducationExperienceDialog } from '@/components/profile/education-experience-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -15,7 +16,6 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Separator } from '@/components/ui/separator'
 import { useAuthStore } from '@/store/auth.store'
-import type { CreateEducationExperienceInput } from '@/lib/profile.schemas'
 import {
   createEducationExperienceFn,
   deleteEducationExperienceFn,
@@ -33,7 +33,7 @@ interface EducationExperienceItem {
 }
 
 interface EducationExperienceListProps {
-  items: EducationExperienceItem[]
+  items: Array<EducationExperienceItem>
 }
 
 export function EducationExperienceList({
@@ -112,7 +112,7 @@ export function EducationExperienceList({
     title,
     type,
   }: {
-    list: EducationExperienceItem[]
+    list: Array<EducationExperienceItem>
     title: string
     type: 'Education' | 'Experience'
   }) => {

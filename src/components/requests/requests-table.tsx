@@ -2,6 +2,10 @@
 
 import { useState } from 'react'
 import { format } from 'date-fns'
+import { Check, Edit2, MoreHorizontal, Trash2, X } from 'lucide-react'
+import { StatusBadge } from './status-badge'
+import { RequestTypeChip } from './request-type-chip'
+import { ApprovalDialog } from './approval-dialog'
 import type { RequestResponse } from '@/lib/request.schemas'
 import {
   Table,
@@ -13,10 +17,6 @@ import {
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { StatusBadge } from './status-badge'
-import { RequestTypeChip } from './request-type-chip'
-import { ApprovalDialog } from './approval-dialog'
-import { Check, Edit2, MoreHorizontal, Trash2, X } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,10 +26,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
-
 interface RequestsTableProps {
   mode: 'sent' | 'received'
-  data: RequestResponse[]
+  data: Array<RequestResponse>
   onApprove?: (requestId: number) => Promise<void>
   onReject?: (requestId: number, reason: string) => Promise<void>
   onEdit?: (request: RequestResponse) => void
@@ -415,4 +414,3 @@ export function RequestsTable({
     </>
   )
 }
-

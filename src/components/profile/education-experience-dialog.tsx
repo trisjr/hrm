@@ -1,6 +1,9 @@
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { format } from 'date-fns'
+import type { CreateEducationExperienceInput } from '@/lib/profile.schemas'
+import { createEducationExperienceSchema } from '@/lib/profile.schemas'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -20,12 +23,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  type CreateEducationExperienceInput,
-  createEducationExperienceSchema,
-} from '@/lib/profile.schemas'
 import { DatePicker } from '@/components/common/date-picker'
-import { format } from 'date-fns'
 
 interface EducationExperienceDialogProps {
   open: boolean

@@ -2,6 +2,7 @@ import * as React from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
+import { format } from 'date-fns'
 import type { CreateUserInput } from '@/lib/user.schemas'
 import { createUserSchema } from '@/lib/user.schemas'
 import { createUserFn, getRolesFn } from '@/server/users.server'
@@ -25,7 +26,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { DatePicker } from '@/components/common/date-picker'
-import { format } from 'date-fns'
 import {
   Select,
   SelectContent,
@@ -45,7 +45,7 @@ export function CreateUserDialog({
   onSuccess,
 }: CreateUserDialogProps) {
   const [open, setOpen] = React.useState(false)
-  const [roles, setRoles] = React.useState<{ id: number; roleName: string }[]>(
+  const [roles, setRoles] = React.useState<Array<{ id: number; roleName: string }>>(
     [],
   )
   const { token, user } = useAuthStore()

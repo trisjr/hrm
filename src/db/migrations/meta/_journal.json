@@ -8,6 +8,13 @@
       "when": 1768436525990,
       "tag": "0000_steady_lionheart",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1768470645799,
+      "tag": "0001_lying_leo",
+      "breakpoints": true
     }
   ]
 }

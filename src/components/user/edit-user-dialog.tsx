@@ -4,9 +4,9 @@ import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import type { UpdateUserInput } from '@/lib/user.schemas'
+import type { UserResponse } from '@/lib/user.types'
 import { updateUserSchema } from '@/lib/user.schemas'
 import { getRolesFn, updateUserFn } from '@/server/users.server'
-import type { UserResponse } from '@/lib/user.types'
 import {
   Dialog,
   DialogContent,
@@ -49,7 +49,7 @@ export function EditUserDialog({
   onSuccess,
 }: EditUserDialogProps) {
   const { token, user: currentUser } = useAuthStore()
-  const [roles, setRoles] = React.useState<{ id: number; roleName: string }[]>(
+  const [roles, setRoles] = React.useState<Array<{ id: number; roleName: string }>>(
     [],
   )
 

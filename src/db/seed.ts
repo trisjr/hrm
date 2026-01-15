@@ -92,6 +92,123 @@ async function seed() {
       console.log('Admin user already exists.')
     }
 
+    // 3. Email Templates
+    console.log('Checking email templates...')
+    const { emailTemplates } = await import('./schema')
+
+    // 3a. Welcome New User Template
+    const welcomeTemplate = await db.query.emailTemplates.findFirst({
+      where: eq(emailTemplates.code, 'WELCOME_NEW_USER'),
+    })
+
+    if (!welcomeTemplate) {
+      console.log('Creating WELCOME_NEW_USER template...')
+      await db.insert(emailTemplates).values({
+        code: 'WELCOME_NEW_USER',
+        name: 'Welcome New User',
+        subject: 'Welcome to HRM System - Activate Your Account',
+        body: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background-color: #4F46E5; color: white; padding: 20px; text-align: center; }
+    .content { padding: 30px 20px; background: #f9fafb; }
+    .button { display: inline-block; padding: 12px 24px; background: #4F46E5; color: white; text-decoration: none; border-radius: 5px; }
+    .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Welcome to HRM System!</h1>
+    </div>
+    <div class="content">
+      <p>Hello <strong>{fullName}</strong>,</p>
+      <p>Your account has been created successfully. Please activate your account by clicking the button below:</p>
+      <p style="text-align: center; margin: 30px 0;">
+        <a href="{verificationLink}" class="button">Activate Account</a>
+      </p>
+      <p>Your email: <strong>{email}</strong></p>
+      <p>If you didn't expect this email, please contact your administrator.</p>
+    </div>
+    <div class="footer">
+      <p>&copy; 2026 Tech House HRM System. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>`,
+        variables: JSON.stringify({
+          fullName: "User's full name",
+          email: "User's email address",
+          verificationLink: 'Account activation link',
+        }),
+        isSystem: true,
+      })
+      console.log('✅ WELCOME_NEW_USER template created')
+    } else {
+      console.log('WELCOME_NEW_USER template already exists.')
+    }
+
+    // 3b. Password Reset Template
+    const resetTemplate = await db.query.emailTemplates.findFirst({
+      where: eq(emailTemplates.code, 'PASSWORD_RESET'),
+    })
+
+    if (!resetTemplate) {
+      console.log('Creating PASSWORD_RESET template...')
+      await db.insert(emailTemplates).values({
+        code: 'PASSWORD_RESET',
+        name: 'Password Reset Request',
+        subject: 'Reset Your Password - HRM System',
+        body: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background-color: #EF4444; color: white; padding: 20px; text-align: center; }
+    .content { padding: 30px 20px; background: #f9fafb; }
+    .button { display: inline-block; padding: 12px 24px; background: #EF4444; color: white; text-decoration: none; border-radius: 5px; }
+    .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Password Reset Request</h1>
+    </div>
+    <div class="content">
+      <p>Hello <strong>{fullName}</strong>,</p>
+      <p>We received a request to reset your password. Click the button below to reset it:</p>
+      <p style="text-align: center; margin: 30px 0;">
+        <a href="{resetLink}" class="button">Reset Password</a>
+      </p>
+      <p>If you didn't request a password reset, please ignore this email or contact your administrator if you have concerns.</p>
+      <p><strong>This link will expire in 24 hours.</strong></p>
+    </div>
+    <div class="footer">
+      <p>&copy; 2026 Tech House HRM System. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>`,
+        variables: JSON.stringify({
+          fullName: "User's full name",
+          resetLink: 'Password reset link',
+        }),
+        isSystem: true,
+      })
+      console.log('✅ PASSWORD_RESET template created')
+    } else {
+      console.log('PASSWORD_RESET template already exists.')
+    }
+
     console.log('✅ Seed completed successfully')
   } catch (error) {
     console.error('❌ Seed failed:', error)

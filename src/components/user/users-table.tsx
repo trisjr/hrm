@@ -1,3 +1,4 @@
+import { MoreHorizontal, Pencil, Trash } from 'lucide-react'
 import type { UserResponse } from '@/lib/user.types'
 import {
   Table,
@@ -18,10 +19,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
-import { MoreHorizontal, Pencil, Trash } from 'lucide-react'
 
 interface UsersTableProps {
-  users: UserResponse[]
+  users: Array<UserResponse>
   isLoading?: boolean
   className?: string
   onEdit?: (user: UserResponse) => void

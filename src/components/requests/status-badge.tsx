@@ -1,5 +1,5 @@
-import { Badge } from '@/components/ui/badge'
 import type { RequestResponse } from '@/lib/request.schemas'
+import { Badge } from '@/components/ui/badge'
 
 interface StatusBadgeProps {
   status: RequestResponse['status']

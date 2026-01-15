@@ -1,8 +1,9 @@
 import * as React from 'react'
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
 import { Plus, Search } from 'lucide-react'
 import { toast } from 'sonner'
+import type { UserResponse } from '@/lib/user.types'
 import { deleteUserFn, listUsersFn } from '@/server/users.server'
 import { UsersTable } from '@/components/user/users-table'
 import { CreateUserDialog } from '@/components/user/create-user-dialog'
@@ -27,7 +28,6 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
-import type { UserResponse } from '@/lib/user.types'
 
 // Search params validation
 const usersSearchSchema = z.object({

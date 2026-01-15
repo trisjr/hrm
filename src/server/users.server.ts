@@ -149,6 +149,65 @@ export const createUserFn = createServerFn({ method: 'POST' })
         }
       })
 
+      // 4. Send Welcome Email (Auto-email)
+      // Wrap in try-catch to not block user creation if email fails
+      try {
+        const { emailTemplates, emailLogs } = await import('@/db/schema')
+        const { sendEmail, replacePlaceholders } =
+          await import('@/lib/email.utils')
+
+        // Fetch WELCOME_NEW_USER template
+        const welcomeTemplate = await db.query.emailTemplates.findFirst({
+          where: and(
+            eq(emailTemplates.code, 'WELCOME_NEW_USER'),
+            isNull(emailTemplates.deletedAt),
+          ),
+        })
+
+        if (welcomeTemplate) {
+          // Build verification link
+          const verificationLink = `${process.env.APP_URL || 'http://localhost:3000'}/verify?token=${result.verifyToken}`
+
+          // Replace placeholders
+          const placeholderValues = {
+            fullName: result.profile.fullName,
+            email: result.user.email,
+            verificationLink,
+          }
+
+          const finalSubject = replacePlaceholders(
+            welcomeTemplate.subject,
+            placeholderValues,
+          )
+          const finalBody = replacePlaceholders(
+            welcomeTemplate.body,
+            placeholderValues,
+          )
+
+          // Send email
+          const emailResult = await sendEmail(
+            result.user.email,
+            finalSubject,
+            finalBody,
+          )
+
+          // Create log entry
+          await db.insert(emailLogs).values({
+            templateId: welcomeTemplate.id,
+            senderId: null, // System send
+            recipientEmail: result.user.email,
+            subject: finalSubject,
+            body: finalBody,
+            status: emailResult.success ? 'SENT' : 'FAILED',
+            sentAt: emailResult.success ? new Date() : null,
+            errorMessage: emailResult.error || null,
+          })
+        }
+      } catch (emailError) {
+        // Log error but don't fail user creation
+        console.error('Failed to send welcome email:', emailError)
+      }
+
       // Return user data with profile (không trả passwordHash)
       const { passwordHash: _, ...userWithoutPassword } = result.user
 

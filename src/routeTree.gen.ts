@@ -18,6 +18,7 @@ import { Route as RequestsIndexRouteImport } from './routes/requests/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminUsersIndexRouteImport } from './routes/admin/users/index'
 import { Route as AdminRequestsIndexRouteImport } from './routes/admin/requests/index'
+import { Route as AdminEmailTemplatesIndexRouteImport } from './routes/admin/email-templates/index'
 
 const VerifyRoute = VerifyRouteImport.update({
   id: '/verify',
@@ -64,6 +65,12 @@ const AdminRequestsIndexRoute = AdminRequestsIndexRouteImport.update({
   path: '/admin/requests/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminEmailTemplatesIndexRoute =
+  AdminEmailTemplatesIndexRouteImport.update({
+    id: '/admin/email-templates/',
+    path: '/admin/email-templates/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -73,6 +80,7 @@ export interface FileRoutesByFullPath {
   '/verify': typeof VerifyRoute
   '/admin': typeof AdminIndexRoute
   '/requests': typeof RequestsIndexRoute
+  '/admin/email-templates': typeof AdminEmailTemplatesIndexRoute
   '/admin/requests': typeof AdminRequestsIndexRoute
   '/admin/users': typeof AdminUsersIndexRoute
 }
@@ -84,6 +92,7 @@ export interface FileRoutesByTo {
   '/verify': typeof VerifyRoute
   '/admin': typeof AdminIndexRoute
   '/requests': typeof RequestsIndexRoute
+  '/admin/email-templates': typeof AdminEmailTemplatesIndexRoute
   '/admin/requests': typeof AdminRequestsIndexRoute
   '/admin/users': typeof AdminUsersIndexRoute
 }
@@ -96,6 +105,7 @@ export interface FileRoutesById {
   '/verify': typeof VerifyRoute
   '/admin/': typeof AdminIndexRoute
   '/requests/': typeof RequestsIndexRoute
+  '/admin/email-templates/': typeof AdminEmailTemplatesIndexRoute
   '/admin/requests/': typeof AdminRequestsIndexRoute
   '/admin/users/': typeof AdminUsersIndexRoute
 }
@@ -109,6 +119,7 @@ export interface FileRouteTypes {
     | '/verify'
     | '/admin'
     | '/requests'
+    | '/admin/email-templates'
     | '/admin/requests'
     | '/admin/users'
   fileRoutesByTo: FileRoutesByTo
@@ -120,6 +131,7 @@ export interface FileRouteTypes {
     | '/verify'
     | '/admin'
     | '/requests'
+    | '/admin/email-templates'
     | '/admin/requests'
     | '/admin/users'
   id:
@@ -131,6 +143,7 @@ export interface FileRouteTypes {
     | '/verify'
     | '/admin/'
     | '/requests/'
+    | '/admin/email-templates/'
     | '/admin/requests/'
     | '/admin/users/'
   fileRoutesById: FileRoutesById
@@ -143,6 +156,7 @@ export interface RootRouteChildren {
   VerifyRoute: typeof VerifyRoute
   AdminIndexRoute: typeof AdminIndexRoute
   RequestsIndexRoute: typeof RequestsIndexRoute
+  AdminEmailTemplatesIndexRoute: typeof AdminEmailTemplatesIndexRoute
   AdminRequestsIndexRoute: typeof AdminRequestsIndexRoute
   AdminUsersIndexRoute: typeof AdminUsersIndexRoute
 }
@@ -212,6 +226,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRequestsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/email-templates/': {
+      id: '/admin/email-templates/'
+      path: '/admin/email-templates'
+      fullPath: '/admin/email-templates'
+      preLoaderRoute: typeof AdminEmailTemplatesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -223,6 +244,7 @@ const rootRouteChildren: RootRouteChildren = {
   VerifyRoute: VerifyRoute,
   AdminIndexRoute: AdminIndexRoute,
   RequestsIndexRoute: RequestsIndexRoute,
+  AdminEmailTemplatesIndexRoute: AdminEmailTemplatesIndexRoute,
   AdminRequestsIndexRoute: AdminRequestsIndexRoute,
   AdminUsersIndexRoute: AdminUsersIndexRoute,
 }

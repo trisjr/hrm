@@ -1,6 +1,6 @@
 {
-  "id": "33d2655b-cf31-439c-8f9e-843af897c81d",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "4a5a72f2-5b32-47a6-b981-2e0b11571ae7",
+  "prevId": "33d2655b-cf31-439c-8f9e-843af897c81d",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -686,6 +686,12 @@
           "primaryKey": true,
           "notNull": true
         },
+        "template_id": {
+          "name": "template_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "sender_id": {
           "name": "sender_id",
           "type": "integer",
@@ -703,6 +709,12 @@
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
+        },
+        "body": {
+          "name": "body",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "status": {
           "name": "status",
@@ -747,6 +759,15 @@
       },
       "indexes": {},
       "foreignKeys": {
+        "email_logs_template_id_email_templates_id_fk": {
+          "name": "email_logs_template_id_email_templates_id_fk",
+          "tableFrom": "email_logs",
+          "tableTo": "email_templates",
+          "columnsFrom": ["template_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
         "email_logs_sender_id_users_id_fk": {
           "name": "email_logs_sender_id_users_id_fk",
           "tableFrom": "email_logs",
@@ -802,6 +823,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "is_system": {
+          "name": "is_system",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "created_at": {
           "name": "created_at",
@@ -2033,6 +2061,13 @@
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true
+        },
+        "is_half_day": {
+          "name": "is_half_day",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
         },
         "reason": {
           "name": "reason",

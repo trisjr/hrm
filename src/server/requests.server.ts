@@ -227,7 +227,7 @@ export const getRequestsReceivedFn = createServerFn({ method: 'GET' })
       throw new Error('User role not found')
     }
 
-    let requests: any[] = []
+    let requests: Array<any> = []
 
     // HR/Admin: See all pending requests
     if (

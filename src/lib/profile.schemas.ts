@@ -11,7 +11,8 @@ export const createEducationExperienceSchema = z.object({
   description: z.string().nullable().optional(),
 })
 
-export const updateEducationExperienceSchema = createEducationExperienceSchema.partial()
+export const updateEducationExperienceSchema =
+  createEducationExperienceSchema.partial()
 
 export type CreateEducationExperienceInput = z.infer<
   typeof createEducationExperienceSchema

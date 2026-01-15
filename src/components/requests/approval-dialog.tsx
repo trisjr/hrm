@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { Loader2 } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -22,7 +23,6 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Textarea } from '@/components/ui/textarea'
-import { Loader2 } from 'lucide-react'
 
 const rejectFormSchema = z.object({
   rejectionReason: z
@@ -126,7 +126,10 @@ export function ApprovalDialog({
         </AlertDialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleReject)} className="space-y-4">
+          <form
+            onSubmit={form.handleSubmit(handleReject)}
+            className="space-y-4"
+          >
             <FormField
               control={form.control}
               name="rejectionReason"

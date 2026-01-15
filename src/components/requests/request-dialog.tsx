@@ -3,10 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import type {
-  CreateRequestInput,
-  RequestResponse,
-} from '@/lib/request.schemas'
+import { Loader2 } from 'lucide-react'
+import type { CreateRequestInput, RequestResponse } from '@/lib/request.schemas'
 import { createRequestSchema } from '@/lib/request.schemas'
 import {
   Dialog,
@@ -36,7 +34,6 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { DatePicker } from '@/components/common/date-picker'
-import { Loader2 } from 'lucide-react'
 
 interface RequestDialogProps {
   open: boolean

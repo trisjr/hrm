@@ -740,7 +740,8 @@ export const emailTemplates = pgTable('email_templates', {
   name: varchar('name', { length: 200 }).notNull(),
   subject: varchar('subject', { length: 255 }).notNull(),
   body: text('body').notNull(), // HTML content
-  variables: text('variables'), // JSON description but schema says Text.
+  variables: text('variables'), // JSON description of placeholders
+  isSystem: boolean('is_system').default(false).notNull(), // System templates cannot be deleted
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
   deletedAt: timestamp('deleted_at'),
@@ -749,9 +750,11 @@ export const emailTemplates = pgTable('email_templates', {
 // --- 2.7 Email Logs ---
 export const emailLogs = pgTable('email_logs', {
   id: serial('id').primaryKey(),
-  senderId: integer('sender_id').references(() => users.id), // Nullable for System?
+  templateId: integer('template_id').references(() => emailTemplates.id), // Reference to template used
+  senderId: integer('sender_id').references(() => users.id), // Nullable for System sends
   recipientEmail: varchar('recipient_email', { length: 150 }).notNull(),
   subject: varchar('subject', { length: 255 }).notNull(),
+  body: text('body'), // Actual HTML content sent (for audit trail)
   status: emailStatusEnum('status').default('QUEUED'),
   sentAt: timestamp('sent_at'),
   errorMessage: text('error_message'),
@@ -760,7 +763,18 @@ export const emailLogs = pgTable('email_logs', {
   deletedAt: timestamp('deleted_at'),
 })
 
+export const emailTemplatesRelations = relations(
+  emailTemplates,
+  ({ many }) => ({
+    emailLogs: many(emailLogs),
+  }),
+)
+
 export const emailLogsRelations = relations(emailLogs, ({ one }) => ({
+  template: one(emailTemplates, {
+    fields: [emailLogs.templateId],
+    references: [emailTemplates.id],
+  }),
   sender: one(users, {
     fields: [emailLogs.senderId],
     references: [users.id],
