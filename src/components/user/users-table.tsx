@@ -67,7 +67,7 @@ export function UsersTable({
   return (
     <>
       {/* Desktop Table View */}
-      <div className={cn('hidden md:block', className)}>
+      <div className={cn('hidden rounded-md border md:block', className)}>
         <Table>
           <TableHeader>
             <TableRow>

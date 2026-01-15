@@ -13,6 +13,7 @@ import AdminLayout from '@/components/layout/admin-layout'
 import { Toaster } from '@/components/ui/sonner.tsx'
 import { useAuthStore } from '@/store/auth.store'
 import { validateTokenFn } from '@/server/validate-token.server'
+import { NotFound } from '@/components/not-found'
 
 const publicPaths = ['/login', '/register', '/change-password']
 
@@ -39,6 +40,7 @@ export const Route = createRootRoute({
   }),
 
   shellComponent: RootDocument,
+  notFoundComponent: NotFound,
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
