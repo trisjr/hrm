@@ -17,7 +17,14 @@ import {
   updateUserSchema,
 } from '@/lib/user.schemas'
 import { db } from '@/db'
-import { profiles, roles, users, verificationTokens } from '@/db/schema'
+import {
+  careerBands,
+  profiles,
+  roles,
+  teams,
+  users,
+  verificationTokens,
+} from '@/db/schema'
 import { hashPassword, verifyToken } from '@/lib/auth.utils'
 
 /**
@@ -281,38 +288,62 @@ export const listUsersFn = createServerFn({ method: 'GET' })
       .leftJoin(profiles, eq(users.id, profiles.userId))
       .where(and(...whereConditions))
 
-    // Fetch users with profile
-    const usersList = await db.query.users.findMany({
-      where: and(...whereConditions),
-      with: {
-        profile: true,
-        role: true,
-        team: true,
-        careerBand: true,
-      },
-      limit,
-      offset: (page - 1) * limit,
-      orderBy: [desc(users.createdAt)],
-    })
+    // Fetch users with profile using Query Builder to support search across tables
+    const usersList = await db
+      .select({
+        user: users,
+        profile: profiles,
+        role: roles,
+        team: teams,
+        careerBand: careerBands,
+      })
+      .from(users)
+      .leftJoin(profiles, eq(users.id, profiles.userId))
+      .leftJoin(roles, eq(users.roleId, roles.id))
+      .leftJoin(teams, eq(users.teamId, teams.id))
+      .leftJoin(careerBands, eq(users.careerBandId, careerBands.id))
+      .where(and(...whereConditions))
+      .limit(limit)
+      .offset((page - 1) * limit)
+      .orderBy(desc(users.createdAt))
 
     // Transform response
-    const transformedUsers = usersList.map((user) => {
-      const { passwordHash, deletedAt, ...userWithoutPassword } = user
-      return {
-        ...userWithoutPassword,
-        profile: {
-          fullName: user.profile.fullName,
-          dob: user.profile.dob,
-          gender: user.profile.gender,
-          idCardNumber: user.profile.idCardNumber,
-          address: user.profile.address,
-          joinDate: user.profile.joinDate,
-          unionJoinDate: user.profile.unionJoinDate,
-          unionPosition: user.profile.unionPosition,
-          avatarUrl: user.profile.avatarUrl,
-        },
-      }
-    })
+    const transformedUsers = usersList.map(
+      ({ user, profile, role, team, careerBand }) => {
+        const { passwordHash, deletedAt, ...userWithoutPassword } = user
+
+        return {
+          ...userWithoutPassword,
+          role: role || null,
+          team: team || null,
+          careerBand: careerBand || null,
+          profile: profile
+            ? {
+                fullName: profile.fullName,
+                dob: profile.dob,
+                gender: profile.gender,
+                idCardNumber: profile.idCardNumber,
+                address: profile.address,
+                joinDate: profile.joinDate,
+                unionJoinDate: profile.unionJoinDate,
+                unionPosition: profile.unionPosition,
+                avatarUrl: profile.avatarUrl,
+              }
+            : {
+                // Fallback if profile is missing (should not happen given logic)
+                fullName: '',
+                dob: null,
+                gender: null,
+                idCardNumber: null,
+                address: null,
+                joinDate: null,
+                unionJoinDate: null,
+                unionPosition: null,
+                avatarUrl: null,
+              },
+        }
+      },
+    )
 
     return {
       users: transformedUsers,
