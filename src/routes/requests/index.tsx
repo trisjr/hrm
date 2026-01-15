@@ -268,7 +268,7 @@ function RouteComponent() {
 
         {/* Received Requests Tab */}
         {canApprove && (
-          <TabsContent value="received" className="mt-6">
+          <TabsContent value="received">
             <RequestsTable
               mode="received"
               data={receivedRequests}
@@ -280,7 +280,7 @@ function RouteComponent() {
         )}
 
         {/* Sent Requests Tab */}
-        <TabsContent value="sent" className="mt-6">
+        <TabsContent value="sent">
           <RequestsTable
             mode="sent"
             data={sentRequests}

@@ -16,7 +16,16 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { StatusBadge } from './status-badge'
 import { RequestTypeChip } from './request-type-chip'
 import { ApprovalDialog } from './approval-dialog'
-import { Check, Edit2, Trash2, X } from 'lucide-react'
+import { Check, Edit2, MoreHorizontal, Trash2, X } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+
 
 interface RequestsTableProps {
   mode: 'sent' | 'received'
@@ -78,7 +87,7 @@ export function RequestsTable({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="text-muted-foreground">Loading requests...</div>
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent" />
       </div>
     )
   }
@@ -102,7 +111,8 @@ export function RequestsTable({
 
   return (
     <>
-      <div className="rounded-md border">
+      {/* Desktop Table View */}
+      <div className="hidden rounded-md border md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -205,52 +215,188 @@ export function RequestsTable({
                 {/* Actions */}
                 <TableCell className="text-right">
                   <div className="flex justify-end space-x-2">
-                    {mode === 'sent' && request.status === 'PENDING' && (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onEdit?.(request)}
-                        >
-                          <Edit2 className="h-4 w-4 mr-1" />
-                          Edit
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => onCancel?.(request.id)}
-                        >
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          Cancel
-                        </Button>
-                      </>
-                    )}
-                    {mode === 'received' && (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="default"
-                          onClick={() => handleApproveClick(request.id)}
-                        >
-                          <Check className="h-4 w-4 mr-1" />
-                          Approve
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleRejectClick(request.id)}
-                        >
-                          <X className="h-4 w-4 mr-1" />
-                          Reject
-                        </Button>
-                      </>
-                    )}
+                    {(mode === 'sent' && request.status === 'PENDING') ||
+                    mode === 'received' ? (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          {mode === 'sent' && request.status === 'PENDING' && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => onEdit?.(request)}
+                              >
+                                <Edit2 className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-red-600 focus:text-red-600"
+                                onClick={() => onCancel?.(request.id)}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Cancel
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {mode === 'received' && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => handleApproveClick(request.id)}
+                              >
+                                <Check className="mr-2 h-4 w-4" />
+                                Approve
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-red-600 focus:text-red-600"
+                                onClick={() => handleRejectClick(request.id)}
+                              >
+                                <X className="mr-2 h-4 w-4" />
+                                Reject
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    ) : null}
                   </div>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="space-y-4 md:hidden">
+        {data.map((request) => (
+          <div
+            key={request.id}
+            className="rounded-lg border bg-card p-4 shadow-sm"
+          >
+            <div className="mb-3 flex items-start justify-between">
+              <div className="space-y-1">
+                <RequestTypeChip
+                  type={request.type}
+                  isHalfDay={request.isHalfDay}
+                />
+                <div className="text-xs text-muted-foreground">
+                  {format(new Date(request.createdAt), 'MMM dd, yyyy HH:mm')}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <StatusBadge status={request.status} />
+                {(mode === 'sent' && request.status === 'PENDING') ||
+                mode === 'received' ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="h-8 w-8 p-0">
+                        <span className="sr-only">Open menu</span>
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      {mode === 'sent' && request.status === 'PENDING' && (
+                        <>
+                          <DropdownMenuItem onClick={() => onEdit?.(request)}>
+                            <Edit2 className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-red-600 focus:text-red-600"
+                            onClick={() => onCancel?.(request.id)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Cancel
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                      {mode === 'received' && (
+                        <>
+                          <DropdownMenuItem
+                            onClick={() => handleApproveClick(request.id)}
+                          >
+                            <Check className="mr-2 h-4 w-4" />
+                            Approve
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-red-600 focus:text-red-600"
+                            onClick={() => handleRejectClick(request.id)}
+                          >
+                            <X className="mr-2 h-4 w-4" />
+                            Reject
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between border-b pb-2">
+                <span className="text-muted-foreground">Duration:</span>
+                <span className="font-medium">
+                  {format(new Date(request.startDate), 'MMM dd')} -{' '}
+                  {format(new Date(request.endDate), 'MMM dd, yyyy')}
+                </span>
+              </div>
+
+              {mode === 'received' && request.user && (
+                <div className="flex justify-between items-center py-1">
+                  <span className="text-muted-foreground">From:</span>
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-6 w-6">
+                      <AvatarFallback className="text-[10px]">
+                        {request.user.profile?.fullName
+                          ?.split(' ')
+                          .map((n) => n[0])
+                          .join('')
+                          .toUpperCase() || '??'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="text-right">
+                      <p className="font-medium leading-none">
+                        {request.user.profile?.fullName}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {request.user.employeeCode}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {mode === 'sent' && (
+                <div className="flex justify-between items-center py-1">
+                  <span className="text-muted-foreground">Approver:</span>
+                  {request.approver ? (
+                    <div className="text-right">
+                      <p className="font-medium leading-none">
+                        {request.approver.profile?.fullName || 'Unknown'}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {request.approver.employeeCode}
+                      </p>
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground">Pending</span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Approval Dialog */}
@@ -269,3 +415,4 @@ export function RequestsTable({
     </>
   )
 }
+
