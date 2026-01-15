@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
-import { eq } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 import { users } from '../db/schema'
 import {
   comparePassword,
@@ -20,7 +20,7 @@ export const loginFn = createServerFn({ method: 'POST' })
 
     // 1. Find user by email
     const user = await db.query.users.findFirst({
-      where: eq(users.email, email),
+      where: and(eq(users.email, email), isNull(users.deletedAt)),
       with: {
         profile: true,
         role: true,

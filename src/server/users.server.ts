@@ -77,9 +77,9 @@ export const createUserFn = createServerFn({ method: 'POST' })
 
         if (
           targetRole &&
-          (targetRole.roleName === 'Admin' || targetRole.roleName === 'HR')
+          (targetRole.roleName === 'ADMIN' || targetRole.roleName === 'HR')
         ) {
-          if (requester.role.roleName !== 'Admin') {
+          if (requester.role.roleName !== 'ADMIN') {
             throw new Error(
               'Permission denied: Only Admin can create Admin or HR users',
             )
@@ -359,9 +359,9 @@ export const updateUserFn = createServerFn({ method: 'POST' })
 
         if (
           targetRole &&
-          (targetRole.roleName === 'Admin' || targetRole.roleName === 'HR')
+          (targetRole.roleName === 'ADMIN' || targetRole.roleName === 'HR')
         ) {
-          if (requester?.role?.roleName !== 'Admin') {
+          if (requester?.role?.roleName !== 'ADMIN') {
             throw new Error(
               'Permission denied: Only Admin can assign Admin or HR roles',
             )

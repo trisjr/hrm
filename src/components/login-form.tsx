@@ -4,6 +4,7 @@ import * as React from 'react'
 import { toast } from 'sonner'
 import { useRouter } from '@tanstack/react-router'
 import type { LoginInput } from '@/lib/auth.schemas'
+import { loginSchema } from '@/lib/auth.schemas'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -23,7 +24,6 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { loginFn } from '@/server/auth.server'
-import { loginSchema } from '@/lib/auth.schemas'
 
 export function LoginForm({
   className,

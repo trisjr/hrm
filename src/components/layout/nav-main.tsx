@@ -1,5 +1,6 @@
 'use client'
 
+import type { Icon } from '@tabler/icons-react'
 import {
   IconChartBar,
   IconClipboardList,
@@ -11,7 +12,6 @@ import {
   IconUsers,
 } from '@tabler/icons-react'
 import { useNavigate, useRouter } from '@tanstack/react-router'
-import type { Icon } from '@tabler/icons-react'
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -79,6 +79,12 @@ const ALL_MENU_ITEMS: Array<MenuItem> = [
     title: 'User Management',
     url: '/admin/users',
     icon: IconUsers,
+    roles: ['ADMIN', 'HR'],
+  },
+  {
+    title: 'Request Management',
+    url: '/admin/requests',
+    icon: IconClipboardList,
     roles: ['ADMIN', 'HR'],
   },
   {
