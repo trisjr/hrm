@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { format } from 'date-fns'
 import type { UpdateUserInput } from '@/lib/user.schemas'
 import { updateUserSchema } from '@/lib/user.schemas'
-import { updateUserFn } from '@/server/users.server'
+import { getRolesFn, updateUserFn } from '@/server/users.server'
 import type { UserResponse } from '@/lib/user.types'
 import {
   Dialog,
@@ -33,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useAuthStore } from '@/store/auth.store'
 
 interface EditUserDialogProps {
   user: UserResponse | null
@@ -47,12 +48,18 @@ export function EditUserDialog({
   onOpenChange,
   onSuccess,
 }: EditUserDialogProps) {
+  const { token, user: currentUser } = useAuthStore()
+  const [roles, setRoles] = React.useState<{ id: number; roleName: string }[]>(
+    [],
+  )
+
   const form = useForm<UpdateUserInput>({
     resolver: zodResolver(updateUserSchema),
     defaultValues: {
       email: '',
       phone: '',
       status: 'ACTIVE',
+      roleId: undefined,
       profile: {
         fullName: '',
         dob: undefined,
@@ -74,6 +81,7 @@ export function EditUserDialog({
         email: user.email,
         phone: user.phone || '',
         status: user.status as any,
+        roleId: user.roleId || undefined,
         profile: {
           fullName: user.profile?.fullName || '',
           dob: user.profile?.dob || undefined,
@@ -89,18 +97,40 @@ export function EditUserDialog({
     }
   }, [user, open, form])
 
-  // Reset form when dialog closes
+  // Reset form when dialog closes and Fetch roles
   React.useEffect(() => {
     if (!open) {
       form.reset()
+    } else {
+      // Fetch roles
+      const fetchRoles = async () => {
+        try {
+          const rolesData = await getRolesFn()
+          setRoles(rolesData)
+        } catch (error) {
+          console.error('Failed to fetch roles', error)
+          toast.error('Failed to load roles')
+        }
+      }
+      fetchRoles()
     }
   }, [open, form])
 
   async function onSubmit(values: UpdateUserInput) {
     if (!user) return
+    if (!token) {
+      toast.error('You must be logged in to update a user')
+      return
+    }
 
     try {
-      await updateUserFn({ data: { id: user.id.toString(), ...values } })
+      await updateUserFn({
+        data: {
+          token,
+          id: user.id,
+          data: values,
+        },
+      })
       toast.success('User updated successfully')
       onOpenChange(false)
       onSuccess?.()
@@ -110,6 +140,12 @@ export function EditUserDialog({
       })
     }
   }
+
+  // Filter roles based on current user permissions
+  const filteredRoles = React.useMemo(() => {
+    if (currentUser?.roleName === 'Admin') return roles
+    return roles.filter((r) => r.roleName !== 'Admin' && r.roleName !== 'HR')
+  }, [roles, currentUser?.roleName])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -129,7 +165,11 @@ export function EditUserDialog({
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <FormLabel>Employee Code</FormLabel>
-                  <Input value={user?.employeeCode} disabled className="bg-muted" />
+                  <Input
+                    value={user?.employeeCode}
+                    disabled
+                    className="bg-muted"
+                  />
                 </div>
 
                 <FormField
@@ -144,7 +184,7 @@ export function EditUserDialog({
                         value={field.value}
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder="Select status" />
                           </SelectTrigger>
                         </FormControl>
@@ -175,6 +215,41 @@ export function EditUserDialog({
                           {...field}
                         />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Role Select */}
+                <FormField
+                  control={form.control}
+                  name="roleId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Role</FormLabel>
+                      <Select
+                        onValueChange={(value) => field.onChange(Number(value))}
+                        defaultValue={field.value?.toString()}
+                        value={field.value ? field.value.toString() : undefined}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select role" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {filteredRoles.map((role) => (
+                            <SelectItem
+                              key={role.id}
+                              value={role.id.toString()}
+                            >
+                              {role.roleName
+                                .toLowerCase()
+                                .replace(/\b\w/g, (l) => l.toUpperCase())}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -257,7 +332,7 @@ export function EditUserDialog({
                         value={field.value || undefined}
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder="Select gender" />
                           </SelectTrigger>
                         </FormControl>

@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import type { CreateUserInput } from '@/lib/user.schemas'
 import { createUserSchema } from '@/lib/user.schemas'
-import { createUserFn } from '@/server/users.server'
+import { createUserFn, getRolesFn } from '@/server/users.server'
 import {
   Dialog,
   DialogContent,
@@ -33,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useAuthStore } from '@/store/auth.store'
 
 interface CreateUserDialogProps {
   children: React.ReactNode
@@ -44,6 +45,10 @@ export function CreateUserDialog({
   onSuccess,
 }: CreateUserDialogProps) {
   const [open, setOpen] = React.useState(false)
+  const [roles, setRoles] = React.useState<{ id: number; roleName: string }[]>(
+    [],
+  )
+  const { token, user } = useAuthStore()
 
   const form = useForm<CreateUserInput>({
     resolver: zodResolver(createUserSchema),
@@ -52,6 +57,7 @@ export function CreateUserDialog({
       email: '',
       phone: '',
       password: '',
+      roleId: undefined, // Initialize with undefined
       profile: {
         fullName: '',
         dob: undefined,
@@ -70,12 +76,34 @@ export function CreateUserDialog({
   React.useEffect(() => {
     if (!open) {
       form.reset()
+    } else {
+      // Fetch roles when dialog opens
+      const fetchRoles = async () => {
+        try {
+          const rolesData = await getRolesFn()
+          setRoles(rolesData)
+        } catch (error) {
+          console.error('Failed to fetch roles', error)
+          toast.error('Failed to load roles')
+        }
+      }
+      fetchRoles()
     }
   }, [open, form])
 
   async function onSubmit(values: CreateUserInput) {
+    if (!token) {
+      toast.error('You must be logged in to create a user')
+      return
+    }
+
     try {
-      await createUserFn({ data: values })
+      await createUserFn({
+        data: {
+          token,
+          data: values,
+        },
+      })
       toast.success('User created successfully', {
         description: 'Verification email has been sent to the user.',
       })
@@ -87,6 +115,20 @@ export function CreateUserDialog({
       })
     }
   }
+
+  // Filter roles based on current user permissions
+  // Requirement: Only Admin can add HR or Admin
+  // If current user is Admin, show all.
+  // If current user is HR, show non-Admin/non-HR roles?
+  // Wait, the prompt implies "Only Admin -> Admin/HR". It doesn't explicitly forbid HR from adding regular users.
+  // Assuming HR can add regular users (Staff, etc).
+  // Logic:
+  // If Admin: show all.
+  // If non-Admin: hide 'Admin' and 'HR' from the list.
+  const filteredRoles = React.useMemo(() => {
+    if (user?.roleName === 'Admin') return roles
+    return roles.filter((r) => r.roleName !== 'Admin' && r.roleName !== 'HR')
+  }, [roles, user?.roleName])
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -152,6 +194,39 @@ export function CreateUserDialog({
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
+                {/* Role Select */}
+                <FormField
+                  control={form.control}
+                  name="roleId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Role</FormLabel>
+                      <Select
+                        onValueChange={(value) => field.onChange(Number(value))}
+                        defaultValue={field.value?.toString()}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select role" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {filteredRoles.map((role) => (
+                            <SelectItem
+                              key={role.id}
+                              value={role.id.toString()}
+                            >
+                              {role.roleName
+                                .toLowerCase()
+                                .replace(/\b\w/g, (l) => l.toUpperCase())}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="phone"
@@ -248,7 +323,7 @@ export function CreateUserDialog({
                         value={field.value || undefined}
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder="Select gender" />
                           </SelectTrigger>
                         </FormControl>

@@ -5,19 +5,29 @@
 import crypto from 'node:crypto'
 import { createServerFn } from '@tanstack/react-start'
 import { and, desc, eq, isNull, like, or, sql } from 'drizzle-orm'
+import { z } from 'zod'
 import type {
   CreateUserInput,
   ListUsersParams,
   UpdateUserInput,
 } from '@/lib/user.schemas'
-import { db } from '@/db'
-import { profiles, users, verificationTokens } from '@/db/schema'
-import { hashPassword } from '@/lib/auth.utils'
 import {
   createUserSchema,
   listUsersParamsSchema,
   updateUserSchema,
 } from '@/lib/user.schemas'
+import { db } from '@/db'
+import { profiles, roles, users, verificationTokens } from '@/db/schema'
+import { hashPassword, verifyToken } from '@/lib/auth.utils'
+
+/**
+ * Get List Roles
+ */
+export const getRolesFn = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    return db.select().from(roles).where(isNull(roles.deletedAt))
+  },
+)
 
 /**
  * Create User
@@ -25,93 +35,142 @@ import {
  * Default status is INACTIVE, requires email verification to activate
  */
 export const createUserFn = createServerFn({ method: 'POST' })
-  .inputValidator((data: unknown) => createUserSchema.parse(data))
-  .handler(async ({ data }: { data: CreateUserInput }) => {
-    const { password, profile: profileData, ...userData } = data
+  .inputValidator((data: unknown) => {
+    return z
+      .object({
+        token: z.string(),
+        data: createUserSchema,
+      })
+      .parse(data)
+  })
+  .handler(
+    async ({
+      data: input,
+    }: {
+      data: { token: string; data: CreateUserInput }
+    }) => {
+      const { token, data: userDataInput } = input
+      const { password, profile: profileData, ...userData } = userDataInput
 
-    // Check email uniqueness
-    const existingEmail = await db.query.users.findFirst({
-      where: and(eq(users.email, userData.email), isNull(users.deletedAt)),
-    })
-    if (existingEmail) {
-      throw new Error('Email already exists in the system')
-    }
+      // 0. Permission Check
+      // Verify token
+      const userSession = verifyToken(token)
+      if (!userSession || !userSession.id) {
+        throw new Error('Unauthorized: Invalid authentication token')
+      }
 
-    // Check employee code uniqueness
-    const existingCode = await db.query.users.findFirst({
-      where: and(
-        eq(users.employeeCode, userData.employeeCode),
-        isNull(users.deletedAt),
-      ),
-    })
-    if (existingCode) {
-      throw new Error('Employee code already exists in the system')
-    }
-
-    // Hash password
-    const passwordHash = await hashPassword(password)
-
-    // Start transaction
-    const result = await db.transaction(async (tx) => {
-      // 1. Create user with INACTIVE status
-      const [newUser] = await tx
-        .insert(users)
-        .values({
-          ...userData,
-          passwordHash,
-          status: 'INACTIVE', // Not active yet, requires email verification
-        })
-        .returning()
-
-      // 2. Create profile
-      const [newProfile] = await tx
-        .insert(profiles)
-        .values({
-          userId: newUser.id,
-          ...profileData,
-        })
-        .returning()
-
-      // 3. Generate verification token
-      const verifyToken = crypto.randomUUID()
-      const expiresAt = new Date()
-      expiresAt.setHours(expiresAt.getHours() + 24) // Token valid for 24 hours
-
-      await tx.insert(verificationTokens).values({
-        userId: newUser.id,
-        token: verifyToken,
-        type: 'ACTIVATION',
-        expiresAt,
+      // Get requester info
+      const requester = await db.query.users.findFirst({
+        where: eq(users.id, userSession.id),
+        with: { role: true },
       })
 
-      return {
-        user: newUser,
-        profile: newProfile,
-        verifyToken,
+      if (!requester?.role) {
+        throw new Error('Unauthorized: Requester role not found')
       }
-    })
 
-    // Return user data with profile (không trả passwordHash)
-    const { passwordHash: _, ...userWithoutPassword } = result.user
+      // If assigning role, check permissions
+      if (userData.roleId) {
+        const targetRole = await db.query.roles.findFirst({
+          where: eq(roles.id, userData.roleId),
+        })
 
-    return {
-      user: {
-        ...userWithoutPassword,
-        profile: {
-          fullName: result.profile.fullName,
-          dob: result.profile.dob,
-          gender: result.profile.gender,
-          idCardNumber: result.profile.idCardNumber,
-          address: result.profile.address,
-          joinDate: result.profile.joinDate,
-          unionJoinDate: result.profile.unionJoinDate,
-          unionPosition: result.profile.unionPosition,
-          avatarUrl: result.profile.avatarUrl,
+        if (
+          targetRole &&
+          (targetRole.roleName === 'Admin' || targetRole.roleName === 'HR')
+        ) {
+          if (requester.role.roleName !== 'Admin') {
+            throw new Error(
+              'Permission denied: Only Admin can create Admin or HR users',
+            )
+          }
+        }
+      }
+
+      // Check email uniqueness
+      const existingEmail = await db.query.users.findFirst({
+        where: and(eq(users.email, userData.email), isNull(users.deletedAt)),
+      })
+      if (existingEmail) {
+        throw new Error('Email already exists in the system')
+      }
+
+      // Check employee code uniqueness
+      const existingCode = await db.query.users.findFirst({
+        where: and(
+          eq(users.employeeCode, userData.employeeCode),
+          isNull(users.deletedAt),
+        ),
+      })
+      if (existingCode) {
+        throw new Error('Employee code already exists in the system')
+      }
+
+      // Hash password
+      const passwordHash = await hashPassword(password)
+
+      // Start transaction
+      const result = await db.transaction(async (tx) => {
+        // 1. Create user with INACTIVE status
+        const [newUser] = await tx
+          .insert(users)
+          .values({
+            ...userData,
+            passwordHash,
+            status: 'INACTIVE', // Not active yet, requires email verification
+          })
+          .returning()
+
+        // 2. Create profile
+        const [newProfile] = await tx
+          .insert(profiles)
+          .values({
+            userId: newUser.id,
+            ...profileData,
+          })
+          .returning()
+
+        // 3. Generate verification token
+        const verifyTokenStr = crypto.randomUUID()
+        const expiresAt = new Date()
+        expiresAt.setHours(expiresAt.getHours() + 24) // Token valid for 24 hours
+
+        await tx.insert(verificationTokens).values({
+          userId: newUser.id,
+          token: verifyTokenStr,
+          type: 'ACTIVATION',
+          expiresAt,
+        })
+
+        return {
+          user: newUser,
+          profile: newProfile,
+          verifyToken: verifyTokenStr,
+        }
+      })
+
+      // Return user data with profile (không trả passwordHash)
+      const { passwordHash: _, ...userWithoutPassword } = result.user
+
+      return {
+        user: {
+          ...userWithoutPassword,
+          profile: {
+            fullName: result.profile.fullName,
+            dob: result.profile.dob,
+            gender: result.profile.gender,
+            idCardNumber: result.profile.idCardNumber,
+            address: result.profile.address,
+            joinDate: result.profile.joinDate,
+            unionJoinDate: result.profile.unionJoinDate,
+            unionPosition: result.profile.unionPosition,
+            avatarUrl: result.profile.avatarUrl,
+          },
         },
-      },
-      verifyToken: result.verifyToken, // Return to allow logging or email sending
-    }
-  })
+        verifyToken: result.verifyToken, // Return to allow logging or email sending
+      }
+    },
+  )
 
 /**
  * List Users
@@ -256,96 +315,140 @@ export const getUserByIdFn = createServerFn({ method: 'GET' })
  * Update User
  * Update user and profile information
  */
+// Update User
 export const updateUserFn = createServerFn({ method: 'POST' })
   .inputValidator((data: unknown) => {
-    const { id, ...updateData } = data as { id: string } & UpdateUserInput
-    return {
-      id: Number(id),
-      ...updateUserSchema.parse(updateData),
-    }
-  })
-  .handler(async ({ data }: { data: { id: number } & UpdateUserInput }) => {
-    const { id, profile: profileData, ...userData } = data
-
-    // Check user exists
-    const existingUser = await db.query.users.findFirst({
-      where: and(eq(users.id, id), isNull(users.deletedAt)),
+    // Validate intersection of { token, id, ...updateUserSchema }
+    const schema = z.object({
+      token: z.string(),
+      id: z.number(),
+      data: updateUserSchema,
     })
+    const parsed = schema.parse({
+      token: (data as any).token,
+      id: Number((data as any).id),
+      data: (data as any).data,
+    })
+    return parsed
+  })
+  .handler(
+    async ({
+      data: input,
+    }: {
+      data: { token: string; id: number; data: UpdateUserInput }
+    }) => {
+      const { token, id, data: updateDataInput } = input
+      const { profile: profileData, ...userData } = updateDataInput
 
-    if (!existingUser) {
-      throw new Error('User not found')
-    }
+      // 0. Permission Check
+      const userSession = verifyToken(token)
+      if (!userSession || !userSession.id) {
+        throw new Error('Unauthorized: Invalid authentication token')
+      }
 
-    // Check email uniqueness if updating email
-    if (userData.email && userData.email !== existingUser.email) {
-      const emailExists = await db.query.users.findFirst({
-        where: and(eq(users.email, userData.email), isNull(users.deletedAt)),
+      const requester = await db.query.users.findFirst({
+        where: eq(users.id, userSession.id),
+        with: { role: true },
       })
-      if (emailExists) {
-        throw new Error('Email already exists in the system')
+
+      // If assigning role, check permissions
+      if (userData.roleId) {
+        const targetRole = await db.query.roles.findFirst({
+          where: eq(roles.id, userData.roleId),
+        })
+
+        if (
+          targetRole &&
+          (targetRole.roleName === 'Admin' || targetRole.roleName === 'HR')
+        ) {
+          if (requester?.role?.roleName !== 'Admin') {
+            throw new Error(
+              'Permission denied: Only Admin can assign Admin or HR roles',
+            )
+          }
+        }
       }
-    }
 
-    // Start transaction
-    await db.transaction(async (tx) => {
-      // Update user
-      if (Object.keys(userData).length > 0) {
-        await tx
-          .update(users)
-          .set({
-            ...userData,
-            updatedAt: new Date(),
-          })
-          .where(eq(users.id, id))
+      // Check user exists
+      const existingUser = await db.query.users.findFirst({
+        where: and(eq(users.id, id), isNull(users.deletedAt)),
+      })
+
+      if (!existingUser) {
+        throw new Error('User not found')
       }
 
-      // Update profile if provided
-      if (profileData) {
-        await tx
-          .update(profiles)
-          .set({
-            ...profileData,
-            updatedAt: new Date(),
-          })
-          .where(eq(profiles.userId, id))
+      // Check email uniqueness if updating email
+      if (userData.email && userData.email !== existingUser.email) {
+        const emailExists = await db.query.users.findFirst({
+          where: and(eq(users.email, userData.email), isNull(users.deletedAt)),
+        })
+        if (emailExists) {
+          throw new Error('Email already exists in the system')
+        }
       }
-    })
 
-    // Fetch full user data with profile
-    const fullUser = await db.query.users.findFirst({
-      where: eq(users.id, id),
-      with: {
-        profile: true,
-        role: true,
-        team: true,
-        careerBand: true,
-      },
-    })
+      // Start transaction
+      await db.transaction(async (tx) => {
+        // Update user
+        if (Object.keys(userData).length > 0) {
+          await tx
+            .update(users)
+            .set({
+              ...userData,
+              updatedAt: new Date(),
+            })
+            .where(eq(users.id, id))
+        }
 
-    if (!fullUser) {
-      throw new Error('User not found after update')
-    }
+        // Update profile if provided
+        if (profileData) {
+          await tx
+            .update(profiles)
+            .set({
+              ...profileData,
+              updatedAt: new Date(),
+            })
+            .where(eq(profiles.userId, id))
+        }
+      })
 
-    // Transform response
-    const { passwordHash, deletedAt, ...userWithoutPassword } = fullUser
-
-    return {
-      user: {
-        ...userWithoutPassword,
-        profile: {
-          fullName: fullUser.profile.fullName,
-          dob: fullUser.profile.dob,
-          gender: fullUser.profile.gender,
-          idCardNumber: fullUser.profile.idCardNumber,
-          address: fullUser.profile.address,
-          joinDate: fullUser.profile.joinDate,
-          unionJoinDate: fullUser.profile.unionJoinDate,
-          unionPosition: fullUser.profile.unionPosition,
-          avatarUrl: fullUser.profile.avatarUrl,
+      // Fetch full user data with profile
+      const fullUser = await db.query.users.findFirst({
+        where: eq(users.id, id),
+        with: {
+          profile: true,
+          role: true,
+          team: true,
+          careerBand: true,
         },
-      },
-    }
-  })
+      })
+
+      if (!fullUser) {
+        throw new Error('User not found after update')
+      }
+
+      // Transform response
+      const { passwordHash, deletedAt, ...userWithoutPassword } = fullUser
+
+      return {
+        user: {
+          ...userWithoutPassword,
+          profile: {
+            fullName: fullUser.profile.fullName,
+            dob: fullUser.profile.dob,
+            gender: fullUser.profile.gender,
+            idCardNumber: fullUser.profile.idCardNumber,
+            address: fullUser.profile.address,
+            joinDate: fullUser.profile.joinDate,
+            unionJoinDate: fullUser.profile.unionJoinDate,
+            unionPosition: fullUser.profile.unionPosition,
+            avatarUrl: fullUser.profile.avatarUrl,
+          },
+        },
+      }
+    },
+  )
 
 /**
  * Delete User
