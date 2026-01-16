@@ -17,6 +17,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as RequestsIndexRouteImport } from './routes/requests/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminUsersIndexRouteImport } from './routes/admin/users/index'
+import { Route as AdminTeamsIndexRouteImport } from './routes/admin/teams/index'
 import { Route as AdminRequestsIndexRouteImport } from './routes/admin/requests/index'
 import { Route as AdminProfileRequestsIndexRouteImport } from './routes/admin/profile-requests/index'
 import { Route as AdminEmailTemplatesIndexRouteImport } from './routes/admin/email-templates/index'
@@ -61,6 +62,11 @@ const AdminUsersIndexRoute = AdminUsersIndexRouteImport.update({
   path: '/admin/users/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminTeamsIndexRoute = AdminTeamsIndexRouteImport.update({
+  id: '/admin/teams/',
+  path: '/admin/teams/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminRequestsIndexRoute = AdminRequestsIndexRouteImport.update({
   id: '/admin/requests/',
   path: '/admin/requests/',
@@ -90,6 +96,7 @@ export interface FileRoutesByFullPath {
   '/admin/email-templates': typeof AdminEmailTemplatesIndexRoute
   '/admin/profile-requests': typeof AdminProfileRequestsIndexRoute
   '/admin/requests': typeof AdminRequestsIndexRoute
+  '/admin/teams': typeof AdminTeamsIndexRoute
   '/admin/users': typeof AdminUsersIndexRoute
 }
 export interface FileRoutesByTo {
@@ -103,6 +110,7 @@ export interface FileRoutesByTo {
   '/admin/email-templates': typeof AdminEmailTemplatesIndexRoute
   '/admin/profile-requests': typeof AdminProfileRequestsIndexRoute
   '/admin/requests': typeof AdminRequestsIndexRoute
+  '/admin/teams': typeof AdminTeamsIndexRoute
   '/admin/users': typeof AdminUsersIndexRoute
 }
 export interface FileRoutesById {
@@ -117,6 +125,7 @@ export interface FileRoutesById {
   '/admin/email-templates/': typeof AdminEmailTemplatesIndexRoute
   '/admin/profile-requests/': typeof AdminProfileRequestsIndexRoute
   '/admin/requests/': typeof AdminRequestsIndexRoute
+  '/admin/teams/': typeof AdminTeamsIndexRoute
   '/admin/users/': typeof AdminUsersIndexRoute
 }
 export interface FileRouteTypes {
@@ -132,6 +141,7 @@ export interface FileRouteTypes {
     | '/admin/email-templates'
     | '/admin/profile-requests'
     | '/admin/requests'
+    | '/admin/teams'
     | '/admin/users'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -145,6 +155,7 @@ export interface FileRouteTypes {
     | '/admin/email-templates'
     | '/admin/profile-requests'
     | '/admin/requests'
+    | '/admin/teams'
     | '/admin/users'
   id:
     | '__root__'
@@ -158,6 +169,7 @@ export interface FileRouteTypes {
     | '/admin/email-templates/'
     | '/admin/profile-requests/'
     | '/admin/requests/'
+    | '/admin/teams/'
     | '/admin/users/'
   fileRoutesById: FileRoutesById
 }
@@ -172,6 +184,7 @@ export interface RootRouteChildren {
   AdminEmailTemplatesIndexRoute: typeof AdminEmailTemplatesIndexRoute
   AdminProfileRequestsIndexRoute: typeof AdminProfileRequestsIndexRoute
   AdminRequestsIndexRoute: typeof AdminRequestsIndexRoute
+  AdminTeamsIndexRoute: typeof AdminTeamsIndexRoute
   AdminUsersIndexRoute: typeof AdminUsersIndexRoute
 }
 
@@ -233,6 +246,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminUsersIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/teams/': {
+      id: '/admin/teams/'
+      path: '/admin/teams'
+      fullPath: '/admin/teams'
+      preLoaderRoute: typeof AdminTeamsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/requests/': {
       id: '/admin/requests/'
       path: '/admin/requests'
@@ -268,6 +288,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminEmailTemplatesIndexRoute: AdminEmailTemplatesIndexRoute,
   AdminProfileRequestsIndexRoute: AdminProfileRequestsIndexRoute,
   AdminRequestsIndexRoute: AdminRequestsIndexRoute,
+  AdminTeamsIndexRoute: AdminTeamsIndexRoute,
   AdminUsersIndexRoute: AdminUsersIndexRoute,
 }
 export const routeTree = rootRouteImport

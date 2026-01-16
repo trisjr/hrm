@@ -3,7 +3,7 @@
  * Handle CRUD operations for Teams with proper validation and permissions
  */
 import { createServerFn } from '@tanstack/react-start'
-import { and, count, eq, ilike, isNull, sql } from 'drizzle-orm'
+import { and, count, eq, ilike, inArray, isNull, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '@/db'
 import {
@@ -15,27 +15,27 @@ import {
   workRequests,
 } from '@/db/schema'
 import {
-  addMemberToTeamSchema,
-  assignLeaderSchema,
-  createTeamSchema,
-  deleteTeamSchema,
-  getTeamByIdSchema,
-  getTeamsSchema,
-  removeMemberFromTeamSchema,
-  updateTeamSchema,
   type AddMemberToTeamInput,
+  addMemberToTeamSchema,
   type AssignLeaderInput,
+  assignLeaderSchema,
   type CreateTeamInput,
+  createTeamSchema,
   type DeleteTeamInput,
   type DeleteTeamResponse,
+  deleteTeamSchema,
   type GetTeamByIdInput,
+  getTeamByIdSchema,
   type GetTeamsInput,
+  getTeamsSchema,
   type PaginatedTeams,
   type RemoveMemberFromTeamInput,
+  removeMemberFromTeamSchema,
   type TeamDetail,
   type TeamResponse,
   type TeamWithStats,
   type UpdateTeamInput,
+  updateTeamSchema,
 } from '@/lib/team.schemas'
 import { verifyToken } from '@/lib/auth.utils'
 
@@ -61,7 +61,7 @@ async function verifyAdminOrHR(token: string) {
     throw new Error('User not found or has no role')
   }
 
-  if (!['Admin', 'HR'].includes(user.role.roleName)) {
+  if (!['ADMIN', 'HR'].includes(user.role.roleName)) {
     throw new Error('Insufficient permissions. Admin or HR role required.')
   }
 
@@ -116,7 +116,11 @@ export const createTeamFn = createServerFn({ method: 'POST' })
       .parse(data)
   })
   .handler(
-    async ({ data: input }: { data: { token: string; data: CreateTeamInput } }) => {
+    async ({
+      data: input,
+    }: {
+      data: { token: string; data: CreateTeamInput }
+    }) => {
       const { token, data } = input
 
       // Verify permissions
@@ -142,17 +146,14 @@ export const createTeamFn = createServerFn({ method: 'POST' })
       }
 
       // Create team
-      const newTeam = await db.transaction(async (tx) => {
-        const [team] = await tx
-          .insert(teams)
-          .values({
-            teamName: data.teamName,
-            description: data.description || null,
-            leaderId: data.leaderId || null,
-          })
-          .returning()
-        return team
-      })
+      const [newTeam] = await db
+        .insert(teams)
+        .values({
+          teamName: data.teamName,
+          description: data.description || null,
+          leaderId: data.leaderId || null,
+        })
+        .returning()
 
       return {
         success: true,
@@ -260,7 +261,7 @@ export const getTeamsFn = createServerFn({ method: 'POST' })
         })
         .from(users)
         .where(
-          and(sql`${users.teamId} = ANY(${teamIds})`, isNull(users.deletedAt)),
+          and(inArray(users.teamId, teamIds), isNull(users.deletedAt)),
         )
         .groupBy(users.teamId)
 
@@ -448,7 +449,11 @@ export const updateTeamFn = createServerFn({ method: 'POST' })
       .parse(data)
   })
   .handler(
-    async ({ data: input }: { data: { token: string; data: UpdateTeamInput } }) => {
+    async ({
+      data: input,
+    }: {
+      data: { token: string; data: UpdateTeamInput }
+    }) => {
       const { token, data: validatedData } = input
 
       // Verify permissions
@@ -532,7 +537,11 @@ export const deleteTeamFn = createServerFn({ method: 'POST' })
       .parse(data)
   })
   .handler(
-    async ({ data: input }: { data: { token: string; data: DeleteTeamInput } }) => {
+    async ({
+      data: input,
+    }: {
+      data: { token: string; data: DeleteTeamInput }
+    }) => {
       const { token, data } = input
 
       // Verify permissions
@@ -557,35 +566,32 @@ export const deleteTeamFn = createServerFn({ method: 'POST' })
         },
       })
 
-      // Start transaction
-      const result = await db.transaction(async (tx) => {
-        // Soft delete team
-        await tx
-          .update(teams)
+      // Soft delete team
+      await db
+        .update(teams)
+        .set({
+          deletedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(teams.id, teamId))
+
+      // Unassign all members
+      if (members.length > 0) {
+        await db
+          .update(users)
           .set({
-            deletedAt: new Date(),
+            teamId: null,
             updatedAt: new Date(),
           })
-          .where(eq(teams.id, teamId))
-
-        // Unassign all members
-        if (members.length > 0) {
-          await tx
-            .update(users)
-            .set({
-              teamId: null,
-              updatedAt: new Date(),
-            })
-            .where(eq(users.teamId, teamId))
-        }
-
-        return {
-          success: true,
-          affectedMembers: members.length,
-        }
-      })
+          .where(eq(users.teamId, teamId))
+      }
 
       // TODO: Send email notifications to affected members
+
+      const result: DeleteTeamResponse = {
+        success: true,
+        affectedMembers: members.length,
+      }
 
       return result
     },
@@ -699,36 +705,33 @@ export const removeMemberFromTeamFn = createServerFn({ method: 'POST' })
         throw new Error('User is not a member of this team')
       }
 
-      // Remove user from team in transaction
-      await db.transaction(async (tx) => {
-        // If user is the team leader, clear leaderId
-        const team = await tx.query.teams.findFirst({
-          where: and(
-            eq(teams.id, teamId),
-            eq(teams.leaderId, userId),
-            isNull(teams.deletedAt),
-          ),
-        })
+      // If user is the team leader, clear leaderId
+      const team = await db.query.teams.findFirst({
+        where: and(
+          eq(teams.id, teamId),
+          eq(teams.leaderId, userId),
+          isNull(teams.deletedAt),
+        ),
+      })
 
-        if (team) {
-          await tx
-            .update(teams)
-            .set({
-              leaderId: null,
-              updatedAt: new Date(),
-            })
-            .where(eq(teams.id, teamId))
-        }
-
-        // Remove user from team
-        await tx
-          .update(users)
+      if (team) {
+        await db
+          .update(teams)
           .set({
-            teamId: null,
+            leaderId: null,
             updatedAt: new Date(),
           })
-          .where(eq(users.id, userId))
-      })
+          .where(eq(teams.id, teamId))
+      }
+
+      // Remove user from team
+      await db
+        .update(users)
+        .set({
+          teamId: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, userId))
 
       // TODO: Send notification email to user
 
@@ -790,16 +793,14 @@ export const assignLeaderFn = createServerFn({ method: 'POST' })
         }
       }
 
-      // Update team leader in transaction
-      await db.transaction(async (tx) => {
-        await tx
-          .update(teams)
-          .set({
-            leaderId,
-            updatedAt: new Date(),
-          })
-          .where(eq(teams.id, teamId))
-      })
+      // Update team leader
+      await db
+        .update(teams)
+        .set({
+          leaderId,
+          updatedAt: new Date(),
+        })
+        .where(eq(teams.id, teamId))
 
       // TODO: Send emails to old and new leader
 
