@@ -13,7 +13,7 @@ import {
   IconUsers,
   IconUsersGroup,
 } from '@tabler/icons-react'
-import { useNavigate, useRouter } from '@tanstack/react-router'
+import { useLocation, useNavigate } from '@tanstack/react-router'
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -128,9 +128,8 @@ const ALL_MENU_ITEMS: Array<MenuItem> = [
 ]
 
 export function NavMain() {
-  const router = useRouter()
+  const location = useLocation()
   const navigate = useNavigate()
-  const route = router.state.location
   const { user } = useAuthStore()
 
   const handleClick = async (url: string) => {
@@ -138,14 +137,12 @@ export function NavMain() {
   }
 
   const isActive = (url: string) => {
-    return route.pathname === url
+    return location.pathname === url
   }
 
   // Filter menu items based on user role
   const getFilteredMenuItems = (): Array<MenuItem> => {
     const userRole = user?.roleName as RoleName | undefined
-
-    console.log(userRole)
 
     if (!userRole) {
       // If no role, show minimal menu
