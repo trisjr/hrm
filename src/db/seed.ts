@@ -423,6 +423,245 @@ async function seed() {
       console.log('TEAM_DELETED template already exists.')
     }
 
+    // 3g. Competency Data Seeding
+    console.log('Checking Competency Data...')
+    const {
+      careerBands,
+      competencyGroups,
+      competencies,
+      competencyLevels,
+      competencyRequirements,
+      assessmentCycles,
+    } = await import('./schema')
+
+    // 1. Career Bands
+    console.log('Seeding Career Bands...')
+    const bandsToSeed = [
+      { bandName: 'Band 1', title: 'Junior' },
+      { bandName: 'Band 2', title: 'Middle' },
+      { bandName: 'Band 3', title: 'Senior' },
+      { bandName: 'Band 4', title: 'Lead' },
+      { bandName: 'Band 5', title: 'Principal' },
+    ]
+    const existingBands = await db.select().from(careerBands)
+    const existingTitles = existingBands.map((b) => b.title)
+
+    for (const band of bandsToSeed) {
+      if (!existingTitles.includes(band.title)) {
+        await db.insert(careerBands).values({
+          bandName: band.bandName,
+          title: band.title,
+          description: `${band.title} Level Career Band (${band.bandName})`,
+        })
+      }
+    }
+
+    // 2. Competency Groups
+    console.log('Seeding Competency Groups...')
+    let techGroup = await db.query.competencyGroups.findFirst({
+      where: eq(competencyGroups.name, 'Technical Skills'),
+    })
+    if (!techGroup) {
+      const [newGroup] = await db
+        .insert(competencyGroups)
+        .values({
+          name: 'Technical Skills',
+          description: 'Technical proficiencies required for engineering roles',
+        })
+        .returning()
+      techGroup = newGroup
+    }
+
+    let softGroup = await db.query.competencyGroups.findFirst({
+      where: eq(competencyGroups.name, 'Soft Skills'),
+    })
+    if (!softGroup) {
+      const [newGroup] = await db
+        .insert(competencyGroups)
+        .values({
+          name: 'Soft Skills',
+          description: 'Interpersonal and behavioral skills',
+        })
+        .returning()
+      softGroup = newGroup
+    }
+
+    // 3. Competencies & Levels
+    console.log('Seeding Competencies...')
+    const compData = [
+      {
+        name: 'React.js',
+        group: techGroup,
+        levels: [
+          'Knows basic components',
+          'Can build simple apps',
+          'Understands hooks & context',
+          'Optimizes performance',
+          'Architects libraries',
+        ],
+      },
+      {
+        name: 'Node.js',
+        group: techGroup,
+        levels: [
+          'Basic HTTP server',
+          'Express/NestJS APIs',
+          'DB Integration & Auth',
+          'Scalable Microservices',
+          'Core Node contribution',
+        ],
+      },
+      {
+        name: 'Communication',
+        group: softGroup,
+        levels: [
+          'Listens actively',
+          'Expresses ideas clearly',
+          'Persuades effectively',
+          'Negotiates conflicts',
+          'Inspires organization',
+        ],
+      },
+      {
+        name: 'Teamwork',
+        group: softGroup,
+        levels: [
+          'Participates in meetings',
+          'Supports team members',
+          'Fosters collaboration',
+          'Builds team culture',
+          'Cross-departmental synergy',
+        ],
+      },
+      {
+        name: 'Problem Solving',
+        group: techGroup,
+        levels: [
+          'Solves simple bugs',
+          'Debugs complex issues',
+          'Root cause analysis',
+          'Proactive prevention',
+          'Strategic innovation',
+        ],
+      },
+    ]
+
+    for (const comp of compData) {
+      if (!comp.group) continue // Skip if group creation failed
+
+      const existingComp = await db.query.competencies.findFirst({
+        where: eq(competencies.name, comp.name),
+      })
+
+      if (!existingComp) {
+        const [newComp] = await db
+          .insert(competencies)
+          .values({
+            name: comp.name,
+            groupId: comp.group.id,
+            description: `Competency for ${comp.name}`,
+          })
+          .returning()
+
+        // Create levels
+        const levelsValues = comp.levels.map((desc, index) => ({
+          competencyId: newComp.id,
+          levelNumber: index + 1,
+          behavioralIndicator: desc,
+        }))
+        await db.insert(competencyLevels).values(levelsValues)
+      }
+    }
+
+    // 4. Requirements Matrix
+    console.log('Seeding Requirements Matrix...')
+    // Get fresh data
+    const allBands = await db.select().from(careerBands)
+    const allComps = await db.select().from(competencies)
+    const allReqs = await db.select().from(competencyRequirements)
+
+    if (allReqs.length === 0 && allBands.length > 0 && allComps.length > 0) {
+      const juniorBand = allBands.find((b) => b.title === 'Junior')
+      const middleBand = allBands.find((b) => b.title === 'Middle')
+      const seniorBand = allBands.find((b) => b.title === 'Senior')
+      const role = await db.query.roles.findFirst()
+
+      const reqValues: {
+        careerBandId: number
+        competencyId: number
+        requiredLevel: number
+        roleId: number
+      }[] = []
+
+      // Junior Requirements
+      if (juniorBand && role) {
+        allComps.forEach((comp) => {
+          reqValues.push({
+            careerBandId: juniorBand.id,
+            competencyId: comp.id,
+            requiredLevel: 2,
+            roleId: role.id,
+          })
+        })
+      }
+
+      // Middle Requirements
+      if (middleBand && role) {
+        allComps.forEach((comp) => {
+          reqValues.push({
+            careerBandId: middleBand.id,
+            competencyId: comp.id,
+            requiredLevel: 3,
+            roleId: role.id,
+          })
+        })
+      }
+
+      // Senior Requirements
+      if (seniorBand && role) {
+        allComps.forEach((comp) => {
+          reqValues.push({
+            careerBandId: seniorBand.id,
+            competencyId: comp.id,
+            requiredLevel: 4,
+            roleId: role.id,
+          })
+        })
+      }
+
+      if (reqValues.length > 0) {
+        await db.insert(competencyRequirements).values(reqValues)
+      }
+    }
+
+    // 5. Assessment Cycles
+    console.log('Seeding Assessment Cycles...')
+    const existingCycles = await db.select().from(assessmentCycles)
+    if (existingCycles.length === 0) {
+      await db.insert(assessmentCycles).values([
+        {
+          name: 'Q3 2023 Performance Review',
+          startDate: '2023-07-01',
+          endDate: '2023-09-30',
+          status: 'COMPLETED',
+        },
+        {
+          name: 'Q4 2023 Performance Review',
+          startDate: '2023-10-01',
+          endDate: '2023-12-31',
+          status: 'COMPLETED',
+        },
+        {
+          name: 'Q1 2024 Performance Review',
+          startDate: new Date().toISOString().split('T')[0], // Today
+          endDate: new Date(new Date().setMonth(new Date().getMonth() + 3))
+            .toISOString()
+            .split('T')[0], // +3 months
+          status: 'ACTIVE',
+        },
+      ])
+    }
+
     console.log('✅ Seed completed successfully')
   } catch (error) {
     console.error('❌ Seed failed:', error)

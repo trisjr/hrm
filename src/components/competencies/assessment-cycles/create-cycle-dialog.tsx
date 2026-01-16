@@ -26,8 +26,8 @@ import {
   updateAssessmentCycleFn,
 } from '@/server/competencies.server'
 import {
-  createAssessmentCycleSchema,
   CreateAssessmentCycleInput,
+  createAssessmentCycleSchema,
 } from '@/lib/competency.schemas'
 import { useEffect } from 'react'
 
@@ -129,7 +129,7 @@ export function CreateCycleDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-110">
         <DialogHeader>
           <DialogTitle>
             {cycleToEdit ? 'Edit Assessment Cycle' : 'Create Assessment Cycle'}
@@ -140,7 +140,10 @@ export function CreateCycleDialog({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+          <form
+            onSubmit={form.handleSubmit(handleSubmit)}
+            className="space-y-4"
+          >
             <FormField
               control={form.control}
               name="name"
@@ -148,7 +151,10 @@ export function CreateCycleDialog({
                 <FormItem>
                   <FormLabel>Cycle Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. Q1 2024 Performance Review" {...field} />
+                    <Input
+                      placeholder="e.g. Q1 2024 Performance Review"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -170,7 +176,9 @@ export function CreateCycleDialog({
                             ? field.value.toISOString().split('T')[0]
                             : field.value
                         }
-                        onChange={(e) => field.onChange(new Date(e.target.value))}
+                        onChange={(e) =>
+                          field.onChange(new Date(e.target.value))
+                        }
                       />
                     </FormControl>
                     <FormMessage />
@@ -192,7 +200,9 @@ export function CreateCycleDialog({
                             ? field.value.toISOString().split('T')[0]
                             : field.value
                         }
-                        onChange={(e) => field.onChange(new Date(e.target.value))}
+                        onChange={(e) =>
+                          field.onChange(new Date(e.target.value))
+                        }
                       />
                     </FormControl>
                     <FormMessage />
