@@ -161,8 +161,8 @@ export function CompetencyTable({
           </Card>
         ) : (
           competencies.map((competency) => (
-            <Card key={competency.id}>
-              <CardContent className="p-4">
+            <Card key={competency.id} className="p-4">
+              <CardContent className="p-0">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 space-y-2">
                     <div>
@@ -200,7 +200,9 @@ export function CompetencyTable({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onViewLevels(competency)}>
+                      <DropdownMenuItem
+                        onClick={() => onViewLevels(competency)}
+                      >
                         <IconEye className="mr-2 h-4 w-4" />
                         View Levels
                       </DropdownMenuItem>

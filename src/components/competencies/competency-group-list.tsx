@@ -26,9 +26,9 @@ export function CompetencyGroupList({
   onCreateGroup,
 }: CompetencyGroupListProps) {
   return (
-    <div className="flex h-full flex-col border-r bg-muted/10">
+    <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="border-b p-4">
+      <div className="p-2">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold">Groups</h3>
           <Button

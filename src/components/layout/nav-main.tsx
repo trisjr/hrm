@@ -9,8 +9,8 @@ import {
   IconFileText,
   IconMail,
   IconTarget,
-  IconUsers,
   IconUserEdit,
+  IconUsers,
   IconUsersGroup,
 } from '@tabler/icons-react'
 import { useNavigate, useRouter } from '@tanstack/react-router'
@@ -57,7 +57,7 @@ const ALL_MENU_ITEMS: Array<MenuItem> = [
   },
   {
     title: 'Competency',
-    url: '/competency',
+    url: '/admin/competencies',
     icon: IconTarget,
     roles: ['ADMIN', 'HR', 'LEADER', 'DEV'],
   },

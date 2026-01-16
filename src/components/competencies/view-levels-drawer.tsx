@@ -52,12 +52,13 @@ export function ViewLevelsDrawer({
         <SheetHeader>
           <SheetTitle>{competency.name}</SheetTitle>
           <SheetDescription>
-            {competency.description || 'View behavioral indicators for each level'}
+            {competency.description ||
+              'View behavioral indicators for each level'}
           </SheetDescription>
         </SheetHeader>
 
-        <ScrollArea className="mt-6 h-[calc(100vh-12rem)]">
-          <div className="space-y-4 pr-4">
+        <ScrollArea className="h-[calc(100vh-12rem)]">
+          <div className="space-y-4 px-4">
             {sortedLevels.map((level) => (
               <div
                 key={level.id}
