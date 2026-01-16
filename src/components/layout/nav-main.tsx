@@ -56,10 +56,22 @@ const ALL_MENU_ITEMS: Array<MenuItem> = [
     roles: ['LEADER', 'DEV'],
   },
   {
-    title: 'Competency',
-    url: '/admin/competencies',
+    title: 'My Assessment',
+    url: '/competencies/my-assessment',
     icon: IconTarget,
     roles: ['ADMIN', 'HR', 'LEADER', 'DEV'],
+  },
+  {
+    title: 'My IDP',
+    url: '/competencies/idp',
+    icon: IconChartBar,
+    roles: ['ADMIN', 'HR', 'LEADER', 'DEV'],
+  },
+  {
+    title: 'Competency Mgmt',
+    url: '/admin/competencies',
+    icon: IconTarget,
+    roles: ['ADMIN', 'HR'],
   },
 
   // LEADER and above: Team management

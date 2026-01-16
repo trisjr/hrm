@@ -227,3 +227,90 @@ export type UpdateAssessmentCycleInput = z.infer<
 export type ListAssessmentCyclesParams = z.infer<
   typeof listAssessmentCyclesParamsSchema
 >
+
+// ============================================================================
+// USER ASSESSMENTS SCHEMAS (Phase 4)
+// ============================================================================
+
+export const submitSelfAssessmentSchema = z.object({
+  assessmentId: z.number().int().positive(),
+  scores: z.array(
+    z.object({
+      competencyId: z.number().int().positive(),
+      score: z.number().int().min(1).max(5),
+      note: z.string().trim().max(500).optional(),
+    }),
+  ),
+})
+
+export const submitLeaderAssessmentSchema = z.object({
+  assessmentId: z.number().int().positive(),
+  scores: z.array(
+    z.object({
+      competencyId: z.number().int().positive(),
+      score: z.number().int().min(1).max(5),
+      note: z.string().trim().max(500).optional(),
+    }),
+  ),
+})
+
+export const finalizeAssessmentSchema = z.object({
+  assessmentId: z.number().int().positive(),
+  finalScores: z.array(
+    z.object({
+      competencyId: z.number().int().positive(),
+      finalScore: z.number().int().min(1).max(5),
+    }),
+  ),
+  feedback: z.string().trim().max(2000).optional(),
+})
+
+export const createUserAssessmentSchema = z.object({
+  userId: z.number().int().positive(),
+  cycleId: z.number().int().positive(),
+})
+
+export type SubmitSelfAssessmentInput = z.infer<typeof submitSelfAssessmentSchema>
+export type SubmitLeaderAssessmentInput = z.infer<
+  typeof submitLeaderAssessmentSchema
+>
+
+// ============================================================================
+// IDP SCHEMAS (Phase 5)
+// ============================================================================
+
+export const activityTypeEnum = z.enum([
+  'READING',
+  'TRAINING',
+  'MENTORING',
+  'PROJECT',
+  'OTHER',
+])
+
+export const idpActivityStatusEnum = z.enum(['PENDING', 'DONE'])
+
+export const createIDPActivitySchema = z.object({
+  competencyId: z.number().int().positive(),
+  activityType: activityTypeEnum,
+  description: z.string().trim().min(3).max(500),
+  successCriteria: z.string().trim().max(500).optional(),
+  targetDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD').optional(),
+})
+
+export const createIDPSchema = z.object({
+  assessmentId: z.number().int().positive().optional(),
+  goal: z.string().trim().min(3).max(1000),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD'),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD'),
+  activities: z.array(createIDPActivitySchema).min(1),
+})
+
+export const updateIDPActivitySchema = z.object({
+  activityId: z.number().int().positive(),
+  status: idpActivityStatusEnum,
+  result: z.string().trim().optional(),
+})
+
+export type CreateIDPInput = z.infer<typeof createIDPSchema>
+export type CreateIDPActivityInput = z.infer<typeof createIDPActivitySchema>
+export type UpdateIDPActivityInput = z.infer<typeof updateIDPActivitySchema>

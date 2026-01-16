@@ -10,6 +10,7 @@ import {
   timestamp,
   uniqueIndex,
   varchar,
+  real,
 } from 'drizzle-orm/pg-core'
 import { isNull, relations } from 'drizzle-orm'
 
@@ -360,9 +361,9 @@ export const userAssessments = pgTable('user_assessments', {
   cycleId: integer('cycle_id')
     .references(() => assessmentCycles.id)
     .notNull(),
-  selfScoreAvg: integer('self_score_avg'), // Or real? Final decision: real for averages
-  leaderScoreAvg: integer('leader_score_avg'),
-  finalScoreAvg: integer('final_score_avg'),
+  selfScoreAvg: real('self_score_avg'), 
+  leaderScoreAvg: real('leader_score_avg'),
+  finalScoreAvg: real('final_score_avg'),
   status: assessmentStatusEnum('status').default('SELF_ASSESSING'),
   feedback: text('feedback'),
   createdAt: timestamp('created_at').defaultNow(),
