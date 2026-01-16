@@ -1,12 +1,14 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
+import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/auth.store'
-import { getMyAssessmentFn } from '@/server/assessments.server'
+import { getMyAssessmentFn, startMyAssessmentFn } from '@/server/assessments.server'
+import { getActiveAssessmentCycleFn } from '@/server/competencies.server'
 import { AssessmentDetail } from '@/components/competencies/assessments/assessment-detail'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { IconAlertCircle, IconArrowLeft } from '@tabler/icons-react'
+import { IconAlertCircle, IconArrowLeft, IconPlayerPlay } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
 
 export const Route = createFileRoute('/competencies/my-assessment/')({
   component: RouteComponent,
@@ -14,11 +16,43 @@ export const Route = createFileRoute('/competencies/my-assessment/')({
 
 function RouteComponent() {
   const token = useAuthStore((state: any) => state.token)
+  const queryClient = useQueryClient()
+  const router = useRouter()
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['my-assessment'],
     queryFn: () => getMyAssessmentFn({ data: { token: token! } } as any),
   })
+
+  // Fetch active cycle if no assessment found
+  const { data: activeCycleData } = useQuery({
+    queryKey: ['active-assessment-cycle'],
+    queryFn: () => getActiveAssessmentCycleFn(),
+    enabled: !isLoading && !data?.data, // Only fetch if no assessment
+  })
+
+  const startAssessmentMutation = useMutation({
+    mutationFn: startMyAssessmentFn,
+    onSuccess: () => {
+      toast.success('Assessment started successfully')
+      queryClient.invalidateQueries({ queryKey: ['my-assessment'] })
+      router.invalidate()
+    },
+    onError: (error: any) => {
+      toast.error(`Failed to start assessment: ${error.message}`)
+    },
+  })
+
+  const handleStartAssessment = (cycleId: number) => {
+    console.log('Starting assessment with token:', token)
+    if (!token) {
+        toast.error('Authentication token missing. Please login again.')
+        return
+    }
+    startAssessmentMutation.mutate({
+      data: { token, cycleId },
+    } as any)
+  }
 
   if (isLoading) {
     return (
@@ -47,16 +81,47 @@ function RouteComponent() {
      )
   }
 
+  // ... (Error handling same as before)
+
   const assessmentData = data?.data
+  const activeCycle = activeCycleData?.data
 
   if (!assessmentData) {
+    if (activeCycle) {
+      return (
+        <div className="container mx-auto py-20 max-w-2xl text-center">
+            <div className="bg-card p-10 rounded-xl border shadow-sm">
+                <div className="bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <IconPlayerPlay className="w-8 h-8 text-primary" />
+                </div>
+                <h2 className="text-2xl font-bold mb-2">Assessment Active: {activeCycle.name}</h2>
+                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                    The {activeCycle.name} is currently open. You can start your self-assessment now.
+                    Please complete it before {new Date(activeCycle.endDate).toLocaleDateString()}.
+                </p>
+                <div className="flex gap-4 justify-center">
+                    <Button variant="outline" asChild>
+                        <Link to="/">Cancel</Link>
+                    </Button>
+                    <Button 
+                        onClick={() => handleStartAssessment(activeCycle.id)}
+                        disabled={startAssessmentMutation.isPending}
+                    >
+                        {startAssessmentMutation.isPending ? 'Starting...' : 'Start Assessment'}
+                    </Button>
+                </div>
+            </div>
+        </div>
+      )
+    }
+
+    // No active cycle and no assessment
     return (
       <div className="container mx-auto py-20 max-w-2xl text-center">
         <div className="bg-muted/30 p-10 rounded-xl border border-dashed">
             <h2 className="text-2xl font-bold mb-2">No Active Assessment</h2>
             <p className="text-muted-foreground mb-6">
-                You don't have any pending competency assessment for the current cycle.
-                Contact your HR department if you believe this is a mistake.
+                There are no active assessment cycles available for you at this time.
             </p>
             <Button variant="outline" asChild>
                 <Link to="/">Go Home</Link>

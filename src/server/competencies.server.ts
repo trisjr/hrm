@@ -3,7 +3,7 @@
  * Handle CRUD operations for Competency Framework with proper validation and permissions
  */
 import { createServerFn } from '@tanstack/react-start'
-import { and, count, eq, ilike, isNull, sql } from 'drizzle-orm'
+import { and, count, desc, eq, ilike, isNull, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import {
   createCompetencyGroupSchema,
@@ -973,4 +973,17 @@ export const deleteAssessmentCycleFn = createServerFn({
     success: true,
     message: `Assessment cycle "${existing.name}" deleted successfully`,
   }
+})
+
+/**
+ * Get the currently active assessment cycle
+ */
+export const getActiveAssessmentCycleFn = createServerFn({
+  method: 'GET',
+}).handler(async () => {
+  const activeCycle = await db.query.assessmentCycles.findFirst({
+    where: eq(assessmentCycles.status, 'ACTIVE'),
+    orderBy: [desc(assessmentCycles.startDate)], 
+  })
+  return { success: true, data: activeCycle || null }
 })

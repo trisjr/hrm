@@ -807,17 +807,14 @@ export const getAssessmentByIdFn = createServerFn({ method: 'POST' }).handler(
 export const assignUsersToCycleFn = createServerFn({
   method: 'POST',
 }).handler(async (ctx) => {
+  /* console.log('assignUsersToCycleFn ctx.data:', JSON.stringify(ctx.data, null, 2)) */
   const schema = z.object({
     token: z.string(),
-    data: z.object({
-      cycleId: z.number().int().positive(),
-    }),
+    cycleId: z.number().int().positive(),
   })
-  const data = schema.parse(ctx.data)
+  const { token, cycleId } = schema.parse(ctx.data)
 
-  await verifyAdminOrHR(data.token)
-
-  const { cycleId } = data.data
+  await verifyAdminOrHR(token)
 
   // 1. Get Cycle
   const cycle = await db.query.assessmentCycles.findFirst({
@@ -869,7 +866,7 @@ export const assignUsersToCycleFn = createServerFn({
     const requirements = await db
       .select({
         competencyId: competencyRequirements.competencyId,
-        level: competencyRequirements.level,
+        level: competencyRequirements.requiredLevel,
       })
       .from(competencyRequirements)
       .where(eq(competencyRequirements.careerBandId, user.careerBandId!))
@@ -912,15 +909,15 @@ export const assignUsersToCycleFn = createServerFn({
 export const startMyAssessmentFn = createServerFn({
   method: 'POST',
 }).handler(async (ctx) => {
+  // DEBUG MODE: Return payload to client
+  // throw new Error(`DEBUG_PAYLOAD: ${JSON.stringify(ctx.data)}`)
   const schema = z.object({
     token: z.string(),
-    data: z.object({
-      cycleId: z.number().int().positive(),
-    }),
+    cycleId: z.number().int().positive(),
   })
-  const data = schema.parse(ctx.data)
-  const user = await verifyUser(data.token)
-  const { cycleId } = data.data
+  
+  const { token, cycleId } = schema.parse(ctx.data)
+  const user = await verifyUser(token)
 
   if (!user.careerBandId) {
     throw new Error(
@@ -951,7 +948,7 @@ export const startMyAssessmentFn = createServerFn({
   const requirements = await db
     .select({
       competencyId: competencyRequirements.competencyId,
-      level: competencyRequirements.level,
+      level: competencyRequirements.requiredLevel,
     })
     .from(competencyRequirements)
     .where(eq(competencyRequirements.careerBandId, user.careerBandId))

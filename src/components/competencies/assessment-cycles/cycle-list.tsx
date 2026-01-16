@@ -21,6 +21,7 @@ import {
   IconDots,
   IconEdit,
   IconTrash,
+  IconUsers,
 } from '@tabler/icons-react'
 import { cn } from '@/lib/utils'
 
@@ -36,9 +37,10 @@ interface CycleListProps {
   cycles: AssessmentCycle[]
   onEdit: (cycle: AssessmentCycle) => void
   onDelete: (cycle: AssessmentCycle) => void
+  onAssign?: (cycle: AssessmentCycle) => void
 }
 
-export function CycleList({ cycles, onEdit, onDelete }: CycleListProps) {
+export function CycleList({ cycles, onEdit, onDelete, onAssign }: CycleListProps) {
   if (cycles.length === 0) {
     return (
       <Card className="border-dashed">
@@ -92,6 +94,12 @@ export function CycleList({ cycles, onEdit, onDelete }: CycleListProps) {
                     <IconEdit className="mr-2 h-4 w-4" />
                     Edit Details
                   </DropdownMenuItem>
+                  {cycle.status === 'ACTIVE' && onAssign && (
+                    <DropdownMenuItem onClick={() => onAssign(cycle)}>
+                      <IconUsers className="mr-2 h-4 w-4" />
+                      Assign Users
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="text-destructive focus:text-destructive"

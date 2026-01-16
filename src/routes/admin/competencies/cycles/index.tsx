@@ -7,6 +7,7 @@ import {
   getAssessmentCyclesFn,
   deleteAssessmentCycleFn,
 } from '@/server/competencies.server'
+import { assignUsersToCycleFn } from '@/server/assessments.server'
 import { Button } from '@/components/ui/button'
 import {
   Breadcrumb,
@@ -39,13 +40,14 @@ function RouteComponent() {
   const queryClient = useQueryClient()
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [heroCycle, setHeroCycle] = useState<any>(null) // Cycle being acted upon (edit/delete)
+  const [heroCycle, setHeroCycle] = useState<any>(null)
 
   const { data: cyclesData, isLoading } = useQuery({
     queryKey: ['assessment-cycles'],
     queryFn: () => getAssessmentCyclesFn({ data: { token: token! } } as any),
   })
 
+  // ... (deleteMutation) ...
   const deleteMutation = useMutation({
     mutationFn: async (cycleId: number) => {
       await deleteAssessmentCycleFn({
@@ -65,6 +67,24 @@ function RouteComponent() {
       toast.error(error.message || 'Failed to delete assessment cycle')
     },
   })
+  
+  const assignMutation = useMutation({
+    mutationFn: async (cycleId: number) => {
+        return await assignUsersToCycleFn({
+            data: { token: token!, cycleId }
+        } as any)
+    },
+    onSuccess: (data: any) => {
+        if (data.count === 0) {
+            toast.info(data.message)
+        } else {
+            toast.success(data.message)
+        }
+    },
+    onError: (error: any) => {
+        toast.error(`Failed to assign users: ${error.message}`)
+    }
+  })
 
   const handleEdit = (cycle: any) => {
     setHeroCycle(cycle)
@@ -74,6 +94,12 @@ function RouteComponent() {
   const handleDeleteCallback = (cycle: any) => {
     setHeroCycle(cycle)
     setDeleteDialogOpen(true)
+  }
+  
+  const handleAssignCallback = (cycle: any) => {
+      if (confirm(`Are you sure you want to assign assessments to all eligible users for "${cycle.name}"?`)) {
+          assignMutation.mutate(cycle.id)
+      }
   }
 
   const handleCreateOpenChange = (open: boolean) => {
@@ -144,6 +170,7 @@ function RouteComponent() {
           cycles={cyclesData?.data || []}
           onEdit={handleEdit}
           onDelete={handleDeleteCallback}
+          onAssign={handleAssignCallback}
         />
       )}
 
