@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
@@ -41,6 +41,8 @@ function RouteComponent() {
   const [viewLevelsOpen, setViewLevelsOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedCompetency, setSelectedCompetency] = useState<any>(null)
+
+  const navigate = useNavigate()
 
   // Fetch groups
   const { data: groupsData, refetch: refetchGroups } = useQuery({
@@ -119,6 +121,10 @@ function RouteComponent() {
     setDeleteDialogOpen(true)
   }
 
+  const openMatrix = async () => {
+    await navigate({ to: '/admin/competencies/requirements' })
+  }
+
   return (
     <div className="space-y-6">
       {/* Breadcrumb Navigation */}
@@ -155,13 +161,22 @@ function RouteComponent() {
             Manage competencies and behavioral levels
           </p>
         </div>
-        <Button
-          className="w-full sm:w-auto"
-          onClick={() => setCreateCompetencyOpen(true)}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Create Competency
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button
+            variant="outline"
+            className="w-full sm:w-auto"
+            onClick={openMatrix}
+          >
+            Requirements Matrix
+          </Button>
+          <Button
+            className="w-full sm:w-auto"
+            onClick={() => setCreateCompetencyOpen(true)}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Create Competency
+          </Button>
+        </div>
       </div>
 
       {/* Main Content */}

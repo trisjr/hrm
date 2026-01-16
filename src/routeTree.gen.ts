@@ -24,6 +24,7 @@ import { Route as AdminEmailTemplatesIndexRouteImport } from './routes/admin/ema
 import { Route as AdminCompetenciesIndexRouteImport } from './routes/admin/competencies/index'
 import { Route as AdminTeamsAnalyticsRouteImport } from './routes/admin/teams/analytics'
 import { Route as AdminTeamsTeamIdRouteImport } from './routes/admin/teams/$teamId'
+import { Route as AdminCompetenciesRequirementsIndexRouteImport } from './routes/admin/competencies/requirements/index'
 
 const VerifyRoute = VerifyRouteImport.update({
   id: '/verify',
@@ -102,6 +103,12 @@ const AdminTeamsTeamIdRoute = AdminTeamsTeamIdRouteImport.update({
   path: '/admin/teams/$teamId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminCompetenciesRequirementsIndexRoute =
+  AdminCompetenciesRequirementsIndexRouteImport.update({
+    id: '/admin/competencies/requirements/',
+    path: '/admin/competencies/requirements/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -119,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/admin/requests': typeof AdminRequestsIndexRoute
   '/admin/teams': typeof AdminTeamsIndexRoute
   '/admin/users': typeof AdminUsersIndexRoute
+  '/admin/competencies/requirements': typeof AdminCompetenciesRequirementsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -136,6 +144,7 @@ export interface FileRoutesByTo {
   '/admin/requests': typeof AdminRequestsIndexRoute
   '/admin/teams': typeof AdminTeamsIndexRoute
   '/admin/users': typeof AdminUsersIndexRoute
+  '/admin/competencies/requirements': typeof AdminCompetenciesRequirementsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -154,6 +163,7 @@ export interface FileRoutesById {
   '/admin/requests/': typeof AdminRequestsIndexRoute
   '/admin/teams/': typeof AdminTeamsIndexRoute
   '/admin/users/': typeof AdminUsersIndexRoute
+  '/admin/competencies/requirements/': typeof AdminCompetenciesRequirementsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -173,6 +183,7 @@ export interface FileRouteTypes {
     | '/admin/requests'
     | '/admin/teams'
     | '/admin/users'
+    | '/admin/competencies/requirements'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -190,6 +201,7 @@ export interface FileRouteTypes {
     | '/admin/requests'
     | '/admin/teams'
     | '/admin/users'
+    | '/admin/competencies/requirements'
   id:
     | '__root__'
     | '/'
@@ -207,6 +219,7 @@ export interface FileRouteTypes {
     | '/admin/requests/'
     | '/admin/teams/'
     | '/admin/users/'
+    | '/admin/competencies/requirements/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -225,6 +238,7 @@ export interface RootRouteChildren {
   AdminRequestsIndexRoute: typeof AdminRequestsIndexRoute
   AdminTeamsIndexRoute: typeof AdminTeamsIndexRoute
   AdminUsersIndexRoute: typeof AdminUsersIndexRoute
+  AdminCompetenciesRequirementsIndexRoute: typeof AdminCompetenciesRequirementsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -334,6 +348,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminTeamsTeamIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/competencies/requirements/': {
+      id: '/admin/competencies/requirements/'
+      path: '/admin/competencies/requirements'
+      fullPath: '/admin/competencies/requirements'
+      preLoaderRoute: typeof AdminCompetenciesRequirementsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -353,6 +374,8 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRequestsIndexRoute: AdminRequestsIndexRoute,
   AdminTeamsIndexRoute: AdminTeamsIndexRoute,
   AdminUsersIndexRoute: AdminUsersIndexRoute,
+  AdminCompetenciesRequirementsIndexRoute:
+    AdminCompetenciesRequirementsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
