@@ -152,10 +152,39 @@ export type UpdateCompetencyGroupInput = z.infer<typeof updateCompetencyGroupSch
 
 export type CompetencyLevel = z.infer<typeof competencyLevelSchema>
 export type CreateCompetencyLevelInput = z.infer<
-  typeof createCompetencyLevelInputSchema
->
+  typeof createCompetencyLevelInputSchema>
 
 export type Competency = z.infer<typeof competencySchema>
 export type CreateCompetencyInput = z.infer<typeof createCompetencySchema>
 export type UpdateCompetencyInput = z.infer<typeof updateCompetencySchema>
 export type ListCompetenciesParams = z.infer<typeof listCompetenciesParamsSchema>
+
+// ============================================================================
+// COMPETENCY REQUIREMENTS SCHEMAS (Phase 2)
+// ============================================================================
+
+export const setCompetencyRequirementSchema = z.object({
+  careerBandId: z.number().int().positive('Career Band is required'),
+  competencyId: z.number().int().positive('Competency is required'),
+  requiredLevel: z
+    .number()
+    .int()
+    .min(1, 'Required level must be between 1 and 5')
+    .max(5, 'Required level must be between 1 and 5')
+    .nullable(),
+})
+
+export const bulkSetRequirementsSchema = z.object({
+  requirements: z.array(
+    z.object({
+      careerBandId: z.number().int().positive(),
+      competencyId: z.number().int().positive(),
+      requiredLevel: z.number().int().min(1).max(5).nullable(),
+    }),
+  ),
+})
+
+export type SetCompetencyRequirementInput = z.infer<
+  typeof setCompetencyRequirementSchema
+>
+export type BulkSetRequirementsInput = z.infer<typeof bulkSetRequirementsSchema>

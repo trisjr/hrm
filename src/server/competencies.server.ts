@@ -502,3 +502,240 @@ export const deleteCompetencyFn = createServerFn({ method: 'POST' }).handler(
     }
   },
 )
+
+// ==================== REQUIREMENTS MATRIX FUNCTIONS (Phase 2) ====================
+
+import {
+  setCompetencyRequirementSchema,
+  bulkSetRequirementsSchema,
+} from '@/lib/competency.schemas'
+import { careerBands, competencyRequirements } from '@/db/schema'
+
+/**
+ * Get requirements matrix data
+ * Returns all career bands, competency groups with competencies,
+ * and existing requirements mapped by careerBandId -> competencyId -> requiredLevel
+ */
+export const getRequirementsMatrixFn = createServerFn({ method: 'POST' }).handler(
+  async (ctx) => {
+    const schema = z.object({ token: z.string() })
+    const data = schema.parse(ctx.data)
+
+    await verifyAdminOrHR(data.token)
+
+    // Fetch all career bands
+    const allCareerBands = await db.query.careerBands.findMany({
+      orderBy: (careerBands, { asc }) => [asc(careerBands.bandName)],
+    })
+
+    // Fetch all competency groups with competencies and levels
+    const groups = await db.query.competencyGroups.findMany({
+      with: {
+        competencies: {
+          with: {
+            levels: {
+              orderBy: (levels, { asc }) => [asc(levels.levelNumber)],
+            },
+          },
+          orderBy: (competencies, { asc }) => [asc(competencies.name)],
+        },
+      },
+      orderBy: (competencyGroups, { asc }) => [asc(competencyGroups.name)],
+    })
+
+    // Fetch all existing requirements
+    const allRequirements = await db.query.competencyRequirements.findMany()
+
+    // Build requirements map: { [careerBandId]: { [competencyId]: requiredLevel } }
+    const requirementsMap: Record<number, Record<number, number | null>> = {}
+
+    for (const req of allRequirements) {
+      if (!requirementsMap[req.careerBandId]) {
+        requirementsMap[req.careerBandId] = {}
+      }
+      requirementsMap[req.careerBandId][req.competencyId] = req.requiredLevel
+    }
+
+    return {
+      success: true,
+      data: {
+        careerBands: allCareerBands,
+        groups: groups.map((group) => ({
+          group: {
+            id: group.id,
+            name: group.name,
+            description: group.description,
+          },
+          competencies: group.competencies.map((comp) => ({
+            competency: {
+              id: comp.id,
+              name: comp.name,
+              description: comp.description,
+            },
+            requirements: requirementsMap,
+          })),
+        })),
+      },
+    }
+  },
+)
+
+/**
+ * Set a single competency requirement
+ * Upserts the requirement (creates if not exists, updates if exists)
+ */
+export const setCompetencyRequirementFn = createServerFn({
+  method: 'POST',
+}).handler(async (ctx) => {
+  const schema = z.object({
+    token: z.string(),
+    data: setCompetencyRequirementSchema,
+  })
+  const data = schema.parse(ctx.data)
+
+  await verifyAdminOrHR(data.token)
+
+  const { careerBandId, competencyId, requiredLevel } = data.data
+
+  // Verify career band exists
+  const band = await db.query.careerBands.findFirst({
+    where: eq(careerBands.id, careerBandId),
+  })
+  if (!band) {
+    throw new Error('Career band not found')
+  }
+
+  // Verify competency exists
+  const competency = await db.query.competencies.findFirst({
+    where: eq(competencies.id, competencyId),
+  })
+  if (!competency) {
+    throw new Error('Competency not found')
+  }
+
+  // If requiredLevel is null, delete the requirement
+  if (requiredLevel === null) {
+    await db
+      .delete(competencyRequirements)
+      .where(
+        and(
+          eq(competencyRequirements.careerBandId, careerBandId),
+          eq(competencyRequirements.competencyId, competencyId),
+        ),
+      )
+
+    return {
+      success: true,
+      message: 'Requirement removed',
+    }
+  }
+
+  // Check if requirement already exists
+  const existing = await db.query.competencyRequirements.findFirst({
+    where: and(
+      eq(competencyRequirements.careerBandId, careerBandId),
+      eq(competencyRequirements.competencyId, competencyId),
+    ),
+  })
+
+  if (existing) {
+    // Update existing
+    await db
+      .update(competencyRequirements)
+      .set({ requiredLevel })
+      .where(
+        and(
+          eq(competencyRequirements.careerBandId, careerBandId),
+          eq(competencyRequirements.competencyId, competencyId),
+        ),
+      )
+  } else {
+    // Insert new
+    await db.insert(competencyRequirements).values({
+      careerBandId,
+      competencyId,
+      requiredLevel,
+      roleId: 1, // Default roleId (schema still requires it, will be removed in future migration)
+    })
+  }
+
+  return {
+    success: true,
+    message: 'Requirement updated successfully',
+  }
+})
+
+/**
+ * Bulk set multiple requirements at once
+ * Useful for saving entire matrix or row/column
+ */
+export const bulkSetRequirementsFn = createServerFn({ method: 'POST' }).handler(
+  async (ctx) => {
+    const schema = z.object({
+      token: z.string(),
+      data: bulkSetRequirementsSchema,
+    })
+    const data = schema.parse(ctx.data)
+
+    await verifyAdminOrHR(data.token)
+
+    const { requirements } = data.data
+
+    let updated = 0
+
+    for (const req of requirements) {
+      const { careerBandId, competencyId, requiredLevel } = req
+
+      // If requiredLevel is null, delete
+      if (requiredLevel === null) {
+        await db
+          .delete(competencyRequirements)
+          .where(
+            and(
+              eq(competencyRequirements.careerBandId, careerBandId),
+              eq(competencyRequirements.competencyId, competencyId),
+            ),
+          )
+        updated++
+        continue
+      }
+
+      // Check if exists
+      const existing = await db.query.competencyRequirements.findFirst({
+        where: and(
+          eq(competencyRequirements.careerBandId, careerBandId),
+          eq(competencyRequirements.competencyId, competencyId),
+        ),
+      })
+
+      if (existing) {
+        // Update
+        await db
+          .update(competencyRequirements)
+          .set({ requiredLevel })
+          .where(
+            and(
+              eq(competencyRequirements.careerBandId, careerBandId),
+              eq(competencyRequirements.competencyId, competencyId),
+            ),
+          )
+      } else {
+        // Insert
+        await db.insert(competencyRequirements).values({
+          careerBandId,
+          competencyId,
+          requiredLevel,
+          roleId: 1, // Default roleId
+        })
+      }
+
+      updated++
+    }
+
+    return {
+      success: true,
+      updated,
+      message: `${updated} requirement(s) updated successfully`,
+    }
+  },
+)
