@@ -240,7 +240,17 @@ The Competency Management System helps organizations:
 - Cycles cannot overlap
 - Employees can only assess during active cycles
 
-#### Cycle Lifecycle
+#### Assigning Users to Cycle
+
+Once a cycle is **ACTIVE**, you can bulk assign assessments to all eligible employees (those with an assigned Career Band):
+
+1. In the **Assessment Cycles** list, find the active cycle.
+2. Click the **Actions** menu (three dots).
+3. Select **Assign Users**.
+4. Confirm the action.
+   - The system will create assessment records for all eligible users who don't already have one in this cycle.
+
+### 4. Monitoring Progress
 
 1. **DRAFT**: Cycle created but not started
 2. **ACTIVE**: Employees can self-assess

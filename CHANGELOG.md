@@ -44,6 +44,21 @@ All notable changes to this project will be documented in this file.
   - Skeleton loading states for Team Detail page to improve perceived performance.
   - Accessibility enhancements (ARIA labels).
 
+- **Competency Management - Phase 4: Assessment Assignment & Self-Service**:
+  - **Admin Features**:
+    - Bulk Assignment Action: Admin/HR can now bulk assign assessments to all eligible users (with Career Band) for an active cycle.
+    - Updated `Assessment Cycles` UI with "Assign Users" dropdown action.
+    - Server logic (`assignUsersToCycleFn`) to handle bulk creation, skipping existing assignments.
+    - Conflict resolution strategy (skip duplicates).
+  - **User Features**:
+    - Self-Service Start: Users can now start their own assessment via "My Assessment" dashboard if an active cycle exists.
+    - Empty State UI: Provides clear call-to-action ("Start Assessment") when no assessment is found but a cycle is active.
+    - Automatic Requirement Mapping: System automatically generates assessment details based on User's Career Band requirements.
+  - **Technical Improvements**:
+    - Fixed critical bug in schema mapping `level` vs `requiredLevel` in competency requirements.
+    - Standardized Server Function payload structure (Flat vs Nested) to resolve TanStack Start RPC issues.
+    - Enhanced error handling and debug logging for assessment initiation.
+
 - **Documentation**:
   - Comprehensive [User Guide for Team Management](docs/user_guides/team_management.md).
   - Updated project [README.md](README.md) with new feature overview.
