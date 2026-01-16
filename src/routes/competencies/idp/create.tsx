@@ -226,7 +226,7 @@ function RouteComponent() {
                                             <SelectContent>
                                                 {activityTypeEnum.options.map((option) => (
                                                     <SelectItem key={option} value={option}>
-                                                        {option}
+                                                        {option.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase())}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>

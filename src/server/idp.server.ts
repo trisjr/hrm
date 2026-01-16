@@ -30,7 +30,36 @@ async function verifyUser(token: string) {
 }
 
 /**
- * Create new IDP
+ * Create a new Individual Development Plan (IDP)
+ * 
+ * @description Creates an IDP with multiple development activities linked to competencies.
+ * Typically created after reviewing assessment results to address skill gaps.
+ * 
+ * **Workflow**:
+ * 1. Verify user authentication
+ * 2. Validate optional assessment linkage (if assessmentId provided)
+ * 3. Create main IDP record with goal and timeframe
+ * 4. Create activity records for each development action
+ * 5. Link activities to specific competencies to improve
+ * 
+ * **Business Rules**:
+ * - User can create IDP independently or from assessment results
+ * - Assessment link is optional but recommended for tracking
+ * - Each activity must target a specific competency
+ * - Activities support 4 types: TRAINING, MENTORING, PROJECT_CHALLENGE, SELF_STUDY
+ * - Only one IN_PROGRESS IDP per user at a time (UI enforced)
+ * 
+ * @param token - JWT authentication token
+ * @param data.assessmentId - Optional assessment ID to link (for gap-based IDPs)
+ * @param data.goal - Overall development goal statement
+ * @param data.startDate - Plan start date (YYYY-MM-DD)
+ * @param data.endDate - Plan target completion date (YYYY-MM-DD)
+ * @param data.activities - Array of development activities
+ * 
+ * @throws {Error} Invalid assessment ID (not found or not owned)
+ * @throws {Error} Validation errors (Zod schema)
+ * 
+ * @returns Created IDP record
  */
 export const createIDPFn = createServerFn({ method: 'POST' }).handler(
   async (ctx) => {
@@ -90,7 +119,19 @@ export const createIDPFn = createServerFn({ method: 'POST' }).handler(
 )
 
 /**
- * Get My Active IDP
+ * Get user's active Individual Development Plan
+ * 
+ * @description Fetches the most recent IN_PROGRESS IDP for the current user,
+ * including all activities and their completion status.
+ * 
+ * **Use Cases**:
+ * - Display IDP dashboard with progress tracking
+ * - Check if user has active IDP before allowing new creation
+ * - Monitor activity completion rates
+ * 
+ * @param token - JWT authentication token
+ * 
+ * @returns IDP with activities array, or null if no active IDP
  */
 export const getMyActiveIDPFn = createServerFn({ method: 'POST' }).handler(
   async (ctx) => {

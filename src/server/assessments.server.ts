@@ -66,7 +66,35 @@ async function verifyAdminOrHR(token: string) {
 // ==================== USER ASSESSMENT FUNCTIONS ====================
 
 /**
- * Create assessment for a user (Admin/HR only)
+ * Create a new user assessment for an active cycle
+ * 
+ * @description Creates assessment entry and generates detail records for all competencies
+ * required by the user's role and career band. This initializes the assessment workflow.
+ * 
+ * **Workflow**:
+ * 1. Verify Admin/HR permissions
+ * 2. Validate cycle is ACTIVE
+ * 3. Check user has valid career band assignment
+ * 4. Fetch required competencies for user's role + band
+ * 5. Create main assessment record (status: SELF_ASSESSING)
+ * 6. Generate detail records for each competency (scores initially null)
+ * 
+ * **Business Rules**:
+ * - Only one active assessment per user per cycle
+ * - User must have assigned career band
+ * - At least one competency must be required for the role
+ * 
+ * @param token - JWT authentication token
+ * @param data.userId - Target user ID
+ * @param data.cycleId - Assessment cycle ID
+ * 
+ * @throws {Error} Insufficient permissions
+ * @throws {Error} Cycle not found or not active
+ * @throws {Error} User has no career band assigned
+ * @throws {Error} No competencies required for this role
+ * @throws {Error} Assessment already exists for this user in this cycle
+ * 
+ * @returns Assessment with details array
  */
 export const createUserAssessmentFn = createServerFn({
   method: 'POST',
@@ -287,7 +315,33 @@ export const getMyAssessmentFn = createServerFn({ method: 'POST' }).handler(
 )
 
 /**
- * Submit self-assessment scores
+ * Submit self-assessment scores (Employee action)
+ * 
+ * @description Allows employee to rate themselves on required competencies.
+ * Updates assessment status to LEADER_ASSESSING after submission.
+ * 
+ * **Workflow**:
+ * 1. Verify user authentication
+ * 2. Confirm assessment belongs to current user
+ * 3. Validate assessment is in SELF_ASSESSING status
+ * 4. Update selfScore and selfNotes for each competency
+ * 5. Change assessment status to LEADER_ASSESSING
+ * 
+ * **Business Rules**:
+ * - Can only submit own assessment
+ * - Assessment must be in SELF_ASSESSING status
+ * - Scores must be 1-5 for each competency
+ * - Once submitted, self-scores are locked
+ * 
+ * @param token - JWT authentication token
+ * @param data.assessmentId - Assessment ID
+ * @param data.scores - Array of {competencyId, score, notes}
+ * 
+ * @throws {Error} Assessment not found
+ * @throws {Error} Unauthorized (not your assessment)
+ * @throws {Error} Invalid status (not in SELF_ASSESSING)
+ * 
+ * @returns Success status
  */
 export const submitSelfAssessmentFn = createServerFn({
   method: 'POST',
@@ -746,3 +800,184 @@ export const getAssessmentByIdFn = createServerFn({ method: 'POST' }).handler(
     }
   },
 )
+
+/**
+ * Bulk assign assessments to all eligible users for a cycle (Admin/HR)
+ */
+export const assignUsersToCycleFn = createServerFn({
+  method: 'POST',
+}).handler(async (ctx) => {
+  const schema = z.object({
+    token: z.string(),
+    data: z.object({
+      cycleId: z.number().int().positive(),
+    }),
+  })
+  const data = schema.parse(ctx.data)
+
+  await verifyAdminOrHR(data.token)
+
+  const { cycleId } = data.data
+
+  // 1. Get Cycle
+  const cycle = await db.query.assessmentCycles.findFirst({
+    where: eq(assessmentCycles.id, cycleId),
+  })
+  if (!cycle || cycle.status !== 'ACTIVE') {
+    throw new Error('Cycle not found or not active')
+  }
+
+  // 2. Get all active users with career bands
+  const eligibleUsers = await db.query.users.findMany({
+    where: and(eq(users.status, 'ACTIVE'), isNull(users.deletedAt)),
+    columns: { id: true, careerBandId: true },
+  })
+
+  // Filter those who have careerBandId
+  const usersWithBand = eligibleUsers.filter((u) => u.careerBandId !== null)
+
+  if (usersWithBand.length === 0) {
+    return {
+      success: true,
+      message: 'No eligible users found (need active status and career band)',
+      count: 0,
+    }
+  }
+
+  // 3. Find existing assessments to exclude
+  const existingAssessments = await db.query.userAssessments.findMany({
+    where: eq(userAssessments.cycleId, cycleId),
+    columns: { userId: true },
+  })
+  const existingUserIds = new Set(existingAssessments.map((a) => a.userId))
+
+  // 4. Identify targets
+  const targetUsers = usersWithBand.filter((u) => !existingUserIds.has(u.id))
+
+  if (targetUsers.length === 0) {
+    return {
+      success: true,
+      message: 'All eligible users already assigned',
+      count: 0,
+    }
+  }
+
+  // 5. Process assignments
+  let count = 0
+  for (const user of targetUsers) {
+    // Find requirements for this user's band
+    const requirements = await db
+      .select({
+        competencyId: competencyRequirements.competencyId,
+        level: competencyRequirements.level,
+      })
+      .from(competencyRequirements)
+      .where(eq(competencyRequirements.careerBandId, user.careerBandId!))
+
+    if (requirements.length === 0) continue // Skip if no requirements
+
+    // Create Assessment
+    const [newAssessment] = await db
+      .insert(userAssessments)
+      .values({
+        userId: user.id,
+        cycleId: cycleId,
+        status: 'SELF_ASSESSING',
+      })
+      .returning()
+
+    // Create Details
+    const detailValues = requirements.map((req) => ({
+      userAssessmentId: newAssessment.id,
+      competencyId: req.competencyId,
+      // Scores null initially
+    }))
+
+    if (detailValues.length > 0) {
+      await db.insert(userAssessmentDetails).values(detailValues)
+    }
+    count++
+  }
+
+  return {
+    success: true,
+    message: `Successfully assigned assessments to ${count} users`,
+    count,
+  }
+})
+
+/**
+ * Start assessment for current user (Self-service)
+ */
+export const startMyAssessmentFn = createServerFn({
+  method: 'POST',
+}).handler(async (ctx) => {
+  const schema = z.object({
+    token: z.string(),
+    data: z.object({
+      cycleId: z.number().int().positive(),
+    }),
+  })
+  const data = schema.parse(ctx.data)
+  const user = await verifyUser(data.token)
+  const { cycleId } = data.data
+
+  if (!user.careerBandId) {
+    throw new Error(
+      'You are not assigned to a Career Band. Please contact HR.',
+    )
+  }
+
+  // 1. Verify Cycle
+  const cycle = await db.query.assessmentCycles.findFirst({
+    where: eq(assessmentCycles.id, cycleId),
+  })
+  if (!cycle || cycle.status !== 'ACTIVE') {
+    throw new Error('Cycle is not active')
+  }
+
+  // 2. Check existing
+  const existing = await db.query.userAssessments.findFirst({
+    where: and(
+      eq(userAssessments.userId, user.id),
+      eq(userAssessments.cycleId, cycleId),
+    ),
+  })
+  if (existing) {
+    throw new Error('Assessment already started')
+  }
+
+  // 3. Create Assessment logic (duplicated from above, could extract to helper)
+  const requirements = await db
+    .select({
+      competencyId: competencyRequirements.competencyId,
+      level: competencyRequirements.level,
+    })
+    .from(competencyRequirements)
+    .where(eq(competencyRequirements.careerBandId, user.careerBandId))
+
+  if (requirements.length === 0) {
+    throw new Error('No competency requirements defined for your role/band')
+  }
+
+  const [newAssessment] = await db
+    .insert(userAssessments)
+    .values({
+      userId: user.id,
+      cycleId: cycleId,
+      status: 'SELF_ASSESSING',
+    })
+    .returning()
+
+  const detailValues = requirements.map((req) => ({
+    userAssessmentId: newAssessment.id,
+    competencyId: req.competencyId,
+  }))
+
+  await db.insert(userAssessmentDetails).values(detailValues)
+
+  return {
+    success: true,
+    data: newAssessment,
+  }
+})

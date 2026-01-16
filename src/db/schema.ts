@@ -5,12 +5,12 @@ import {
   json,
   pgEnum,
   pgTable,
+  real,
   serial,
   text,
   timestamp,
   uniqueIndex,
   varchar,
-  real,
 } from 'drizzle-orm/pg-core'
 import { isNull, relations } from 'drizzle-orm'
 
@@ -361,7 +361,7 @@ export const userAssessments = pgTable('user_assessments', {
   cycleId: integer('cycle_id')
     .references(() => assessmentCycles.id)
     .notNull(),
-  selfScoreAvg: real('self_score_avg'), 
+  selfScoreAvg: real('self_score_avg'),
   leaderScoreAvg: real('leader_score_avg'),
   finalScoreAvg: real('final_score_avg'),
   status: assessmentStatusEnum('status').default('SELF_ASSESSING'),

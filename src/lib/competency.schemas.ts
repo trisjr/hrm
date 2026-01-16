@@ -280,11 +280,10 @@ export type SubmitLeaderAssessmentInput = z.infer<
 // ============================================================================
 
 export const activityTypeEnum = z.enum([
-  'READING',
   'TRAINING',
   'MENTORING',
-  'PROJECT',
-  'OTHER',
+  'PROJECT_CHALLENGE',
+  'SELF_STUDY',
 ])
 
 export const idpActivityStatusEnum = z.enum(['PENDING', 'DONE'])
