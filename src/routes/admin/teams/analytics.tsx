@@ -82,7 +82,7 @@ function TeamAnalyticsPage() {
   }
 
   return (
-    <div>
+    <div className="space-y-6">
       {/* Breadcrumb & Header */}
       <div className="flex flex-col gap-4">
         <Breadcrumb>

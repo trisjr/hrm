@@ -46,7 +46,6 @@ import {
 import { replacePlaceholders, sendEmail } from '@/lib/email.utils'
 import { verifyToken } from '@/lib/auth.utils'
 
-
 // ==================== HELPER FUNCTIONS ====================
 
 /**
@@ -310,9 +309,7 @@ export const getTeamsFn = createServerFn({ method: 'POST' })
           count: count(),
         })
         .from(users)
-        .where(
-          and(inArray(users.teamId, teamIds), isNull(users.deletedAt)),
-        )
+        .where(and(inArray(users.teamId, teamIds), isNull(users.deletedAt)))
         .groupBy(users.teamId)
 
       const memberCountMap = new Map(
@@ -903,10 +900,7 @@ export const assignLeaderFn = createServerFn({ method: 'POST' })
             .select({ count: count() })
             .from(teams)
             .where(
-              and(
-                eq(teams.leaderId, team.leaderId),
-                isNull(teams.deletedAt),
-              ),
+              and(eq(teams.leaderId, team.leaderId), isNull(teams.deletedAt)),
             )
 
           // If old leader is not leading any other team, revert to DEV
@@ -1025,7 +1019,7 @@ export const getTeamAnalyticsFn = createServerFn({ method: 'GET' })
       '6-10': 0,
       '11-20': 0,
       '20+': 0,
-      'Empty': 0,
+      Empty: 0,
     }
 
     allTeams.forEach((t) => {
