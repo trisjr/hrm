@@ -833,32 +833,32 @@ const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' })
 
 ### Phase 6: Email Notifications (2-3 hours)
 
-- [ ] Create email templates
-  - [ ] `TEAM_MEMBER_ADDED`
-  - [ ] `TEAM_MEMBER_REMOVED`
-  - [ ] `TEAM_LEADER_ASSIGNED`
-  - [ ] `TEAM_DELETED`
-- [ ] Seed templates in database
-- [ ] Integrate email sending in:
-  - [ ] `addMemberToTeamFn`
-  - [ ] `removeMemberFromTeamFn`
-  - [ ] `assignLeaderFn`
-  - [ ] `deleteTeamFn`
-- [ ] Test email delivery
+- [x] Create email templates
+  - [x] `TEAM_MEMBER_ADDED`
+  - [x] `TEAM_MEMBER_REMOVED`
+  - [x] `TEAM_LEADER_ASSIGNED`
+  - [x] `TEAM_DELETED`
+- [x] Seed templates in database
+- [x] Integrate email sending in:
+  - [x] `addMemberToTeamFn`
+  - [x] `removeMemberFromTeamFn`
+  - [x] `assignLeaderFn`
+  - [x] `deleteTeamFn`
+- [x] Test email delivery
 
 ### Phase 7: Polish & Testing (2-3 hours)
 
-- [ ] Add loading states to all actions
-- [ ] Add error handling with toast notifications
-- [ ] Test responsive design (mobile/tablet/desktop)
-- [ ] Test edge cases:
-  - [ ] Delete team with members
-  - [ ] Assign leader not in team (should fail)
-  - [ ] Remove leader from team (auto-clear leaderId)
-  - [ ] Reassign member between teams
-- [ ] Add keyboard shortcuts (Cmd+K for search)
-- [ ] Add accessibility attributes (ARIA labels)
-- [ ] Optimize performance (debounce search, lazy load charts)
+- [x] Add loading states to all actions
+- [x] Add error handling with toast notifications
+- [x] Test responsive design (mobile/tablet/desktop)
+- [x] Test edge cases:
+  - [x] Delete team with members
+  - [x] Assign leader not in team (should fail)
+  - [x] Remove leader from team (auto-clear leaderId)
+  - [x] Reassign member between teams
+- [x] Add keyboard shortcuts (Cmd+K for search)
+- [x] Add accessibility attributes (ARIA labels)
+- [x] Optimize performance (debounce search, lazy load charts)
 
 ### Phase 8: Documentation (1 hour)
 

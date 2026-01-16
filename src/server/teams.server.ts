@@ -5,11 +5,38 @@
 import { createServerFn } from '@tanstack/react-start'
 import { and, count, eq, ilike, inArray, isNull, sql } from 'drizzle-orm'
 import { z } from 'zod'
+import type {
+  AddMemberToTeamInput,
+  AssignLeaderInput,
+  CreateTeamInput,
+  DeleteTeamInput,
+  DeleteTeamResponse,
+  GetTeamByIdInput,
+  GetTeamsInput,
+  PaginatedTeams,
+  RemoveMemberFromTeamInput,
+  TeamDetail,
+  TeamResponse,
+  TeamWithStats,
+  UpdateTeamInput,
+} from '@/lib/team.schemas'
+import {
+  addMemberToTeamSchema,
+  assignLeaderSchema,
+  createTeamSchema,
+  deleteTeamSchema,
+  getTeamAnalyticsSchema,
+  getTeamByIdSchema,
+  getTeamsSchema,
+  removeMemberFromTeamSchema,
+  teamAnalyticsSchema,
+  updateTeamSchema,
+} from '@/lib/team.schemas'
 import { db } from '@/db'
 import {
+  attendanceLogs,
   emailLogs,
   emailTemplates,
-  attendanceLogs,
   profiles,
   roles,
   teams,
@@ -17,32 +44,8 @@ import {
   workRequests,
 } from '@/db/schema'
 import { replacePlaceholders, sendEmail } from '@/lib/email.utils'
-import {
-  type AddMemberToTeamInput,
-  addMemberToTeamSchema,
-  type AssignLeaderInput,
-  assignLeaderSchema,
-  type CreateTeamInput,
-  createTeamSchema,
-  type DeleteTeamInput,
-  type DeleteTeamResponse,
-  deleteTeamSchema,
-  type GetTeamByIdInput,
-  getTeamByIdSchema,
-  type GetTeamsInput,
-  getTeamsSchema,
-  type PaginatedTeams,
-  type RemoveMemberFromTeamInput,
-  removeMemberFromTeamSchema,
-  type TeamDetail,
-  type TeamResponse,
-  type TeamWithStats,
-  type UpdateTeamInput,
-  updateTeamSchema,
-  getTeamAnalyticsSchema,
-  teamAnalyticsSchema,
-} from '@/lib/team.schemas'
 import { verifyToken } from '@/lib/auth.utils'
+
 
 // ==================== HELPER FUNCTIONS ====================
 
@@ -317,13 +320,13 @@ export const getTeamsFn = createServerFn({ method: 'POST' })
       )
 
       // Combine data with proper null handling
-      const teamsWithStats: TeamWithStats[] = teamsData.map((team) => ({
+      const teamsWithStats: Array<TeamWithStats> = teamsData.map((team) => ({
         ...team,
         createdAt: team.createdAt!,
         updatedAt: team.updatedAt!,
         leader: team.leader.id
           ? {
-              id: team.leader.id!,
+              id: team.leader.id,
               employeeCode: team.leader.employeeCode!,
               email: team.leader.email!,
               fullName: team.leader.fullName!,
@@ -457,8 +460,8 @@ export const getTeamByIdFn = createServerFn({ method: 'POST' })
               id: team.leader.id,
               employeeCode: team.leader.employeeCode,
               email: team.leader.email,
-              fullName: team.leader.profile?.fullName || '',
-              avatarUrl: team.leader.profile?.avatarUrl || null,
+              fullName: team.leader.profile.fullName || '',
+              avatarUrl: team.leader.profile.avatarUrl || null,
             }
           : null,
         members: members.map((m) => ({
@@ -641,7 +644,7 @@ export const deleteTeamFn = createServerFn({ method: 'POST' })
             'TEAM_DELETED',
             {
               email: member.email,
-              fullName: member.profile?.fullName || 'Valued Member',
+              fullName: member.profile.fullName || 'Valued Member',
               id: member.id,
             },
             { teamName: team.teamName },
@@ -725,7 +728,7 @@ export const addMemberToTeamFn = createServerFn({ method: 'POST' })
         'TEAM_MEMBER_ADDED',
         {
           email: user.email,
-          fullName: user.profile?.fullName || 'New Member',
+          fullName: user.profile.fullName || 'New Member',
           id: user.id,
         },
         {
@@ -813,18 +816,16 @@ export const removeMemberFromTeamFn = createServerFn({ method: 'POST' })
         where: eq(profiles.userId, userId),
       })
 
-      if (user) {
-        await sendTeamEmail(
-          'TEAM_MEMBER_REMOVED',
-          {
-            email: user.email,
-            id: user.id,
-            fullName: userProfile?.fullName || 'Member',
-          },
-          { teamName: team?.teamName || 'the team' },
-          requester.id,
-        )
-      }
+      await sendTeamEmail(
+        'TEAM_MEMBER_REMOVED',
+        {
+          email: user.email,
+          id: user.id,
+          fullName: userProfile?.fullName || 'Member',
+        },
+        { teamName: team?.teamName || 'the team' },
+        requester.id,
+      )
 
       return {
         success: true,
@@ -960,7 +961,7 @@ export const assignLeaderFn = createServerFn({ method: 'POST' })
             'TEAM_LEADER_ASSIGNED',
             {
               email: newLeader.email,
-              fullName: newLeader.profile?.fullName || 'Leader',
+              fullName: newLeader.profile.fullName || 'Leader',
               id: newLeader.id,
             },
             {

@@ -61,6 +61,7 @@ export function TeamsTable({
 }: TeamsTableProps) {
   // Debounced search
   const [localSearch, setLocalSearch] = React.useState(searchQuery)
+  const searchInputRef = React.useRef<HTMLInputElement>(null)
 
   React.useEffect(() => {
     const timer = setTimeout(() => {
@@ -70,6 +71,19 @@ export function TeamsTable({
     return () => clearTimeout(timer)
   }, [localSearch, onSearchChange])
 
+  // Keyboard shortcut for search
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        searchInputRef.current?.focus()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
   return (
     <div className="space-y-4">
       {/* Filters */}
@@ -77,10 +91,12 @@ export function TeamsTable({
         <div className="relative flex-1">
           <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search teams..."
+            ref={searchInputRef}
+            placeholder="Search teams... (Cmd+K)"
             value={localSearch}
             onChange={(e) => setLocalSearch(e.target.value)}
             className="pl-9"
+            aria-label="Search teams"
           />
         </div>
         <div className="flex items-center gap-2">
@@ -99,7 +115,7 @@ export function TeamsTable({
               )
             }
           >
-            <SelectTrigger className="w-45">
+            <SelectTrigger className="w-45" aria-label="Filter teams by leader">
               <SelectValue placeholder="Filter by leader" />
             </SelectTrigger>
             <SelectContent>

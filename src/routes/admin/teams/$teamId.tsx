@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   IconArrowLeft,
   IconChartBar,
@@ -165,8 +166,53 @@ function RouteComponent() {
 
   if (!team) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-muted-foreground">Loading team details...</div>
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-10 w-10 rounded-md" />
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-48" />
+              <Skeleton className="h-4 w-64" />
+            </div>
+          </div>
+        </div>
+
+        {/* Stats Cards Skeleton */}
+        <div className="grid gap-4 md:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-4 rounded-full" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-16" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Leader Card Skeleton */}
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-32" />
+          </CardHeader>
+          <CardContent className="flex items-center gap-4">
+            <Skeleton className="h-12 w-12 rounded-full" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-3 w-32" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Members Table Skeleton */}
+        <div className="rounded-md border p-4 space-y-4">
+           <Skeleton className="h-8 w-full" />
+           <Skeleton className="h-8 w-full" />
+           <Skeleton className="h-8 w-full" />
+           <Skeleton className="h-8 w-full" />
+        </div>
       </div>
     )
   }
