@@ -21,6 +21,7 @@ import { Route as AdminTeamsIndexRouteImport } from './routes/admin/teams/index'
 import { Route as AdminRequestsIndexRouteImport } from './routes/admin/requests/index'
 import { Route as AdminProfileRequestsIndexRouteImport } from './routes/admin/profile-requests/index'
 import { Route as AdminEmailTemplatesIndexRouteImport } from './routes/admin/email-templates/index'
+import { Route as AdminCompetenciesIndexRouteImport } from './routes/admin/competencies/index'
 import { Route as AdminTeamsAnalyticsRouteImport } from './routes/admin/teams/analytics'
 import { Route as AdminTeamsTeamIdRouteImport } from './routes/admin/teams/$teamId'
 
@@ -86,6 +87,11 @@ const AdminEmailTemplatesIndexRoute =
     path: '/admin/email-templates/',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AdminCompetenciesIndexRoute = AdminCompetenciesIndexRouteImport.update({
+  id: '/admin/competencies/',
+  path: '/admin/competencies/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminTeamsAnalyticsRoute = AdminTeamsAnalyticsRouteImport.update({
   id: '/admin/teams/analytics',
   path: '/admin/teams/analytics',
@@ -107,6 +113,7 @@ export interface FileRoutesByFullPath {
   '/requests': typeof RequestsIndexRoute
   '/admin/teams/$teamId': typeof AdminTeamsTeamIdRoute
   '/admin/teams/analytics': typeof AdminTeamsAnalyticsRoute
+  '/admin/competencies': typeof AdminCompetenciesIndexRoute
   '/admin/email-templates': typeof AdminEmailTemplatesIndexRoute
   '/admin/profile-requests': typeof AdminProfileRequestsIndexRoute
   '/admin/requests': typeof AdminRequestsIndexRoute
@@ -123,6 +130,7 @@ export interface FileRoutesByTo {
   '/requests': typeof RequestsIndexRoute
   '/admin/teams/$teamId': typeof AdminTeamsTeamIdRoute
   '/admin/teams/analytics': typeof AdminTeamsAnalyticsRoute
+  '/admin/competencies': typeof AdminCompetenciesIndexRoute
   '/admin/email-templates': typeof AdminEmailTemplatesIndexRoute
   '/admin/profile-requests': typeof AdminProfileRequestsIndexRoute
   '/admin/requests': typeof AdminRequestsIndexRoute
@@ -140,6 +148,7 @@ export interface FileRoutesById {
   '/requests/': typeof RequestsIndexRoute
   '/admin/teams/$teamId': typeof AdminTeamsTeamIdRoute
   '/admin/teams/analytics': typeof AdminTeamsAnalyticsRoute
+  '/admin/competencies/': typeof AdminCompetenciesIndexRoute
   '/admin/email-templates/': typeof AdminEmailTemplatesIndexRoute
   '/admin/profile-requests/': typeof AdminProfileRequestsIndexRoute
   '/admin/requests/': typeof AdminRequestsIndexRoute
@@ -158,6 +167,7 @@ export interface FileRouteTypes {
     | '/requests'
     | '/admin/teams/$teamId'
     | '/admin/teams/analytics'
+    | '/admin/competencies'
     | '/admin/email-templates'
     | '/admin/profile-requests'
     | '/admin/requests'
@@ -174,6 +184,7 @@ export interface FileRouteTypes {
     | '/requests'
     | '/admin/teams/$teamId'
     | '/admin/teams/analytics'
+    | '/admin/competencies'
     | '/admin/email-templates'
     | '/admin/profile-requests'
     | '/admin/requests'
@@ -190,6 +201,7 @@ export interface FileRouteTypes {
     | '/requests/'
     | '/admin/teams/$teamId'
     | '/admin/teams/analytics'
+    | '/admin/competencies/'
     | '/admin/email-templates/'
     | '/admin/profile-requests/'
     | '/admin/requests/'
@@ -207,6 +219,7 @@ export interface RootRouteChildren {
   RequestsIndexRoute: typeof RequestsIndexRoute
   AdminTeamsTeamIdRoute: typeof AdminTeamsTeamIdRoute
   AdminTeamsAnalyticsRoute: typeof AdminTeamsAnalyticsRoute
+  AdminCompetenciesIndexRoute: typeof AdminCompetenciesIndexRoute
   AdminEmailTemplatesIndexRoute: typeof AdminEmailTemplatesIndexRoute
   AdminProfileRequestsIndexRoute: typeof AdminProfileRequestsIndexRoute
   AdminRequestsIndexRoute: typeof AdminRequestsIndexRoute
@@ -300,6 +313,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminEmailTemplatesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/competencies/': {
+      id: '/admin/competencies/'
+      path: '/admin/competencies'
+      fullPath: '/admin/competencies'
+      preLoaderRoute: typeof AdminCompetenciesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/teams/analytics': {
       id: '/admin/teams/analytics'
       path: '/admin/teams/analytics'
@@ -327,6 +347,7 @@ const rootRouteChildren: RootRouteChildren = {
   RequestsIndexRoute: RequestsIndexRoute,
   AdminTeamsTeamIdRoute: AdminTeamsTeamIdRoute,
   AdminTeamsAnalyticsRoute: AdminTeamsAnalyticsRoute,
+  AdminCompetenciesIndexRoute: AdminCompetenciesIndexRoute,
   AdminEmailTemplatesIndexRoute: AdminEmailTemplatesIndexRoute,
   AdminProfileRequestsIndexRoute: AdminProfileRequestsIndexRoute,
   AdminRequestsIndexRoute: AdminRequestsIndexRoute,

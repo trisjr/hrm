@@ -1,0 +1,504 @@
+/**
+ * Competency Management Server Functions
+ * Handle CRUD operations for Competency Framework with proper validation and permissions
+ */
+import { createServerFn } from '@tanstack/react-start'
+import { and, count, eq, ilike, isNull, sql } from 'drizzle-orm'
+import { z } from 'zod'
+import {
+  createCompetencyGroupSchema,
+  updateCompetencyGroupSchema,
+  deleteCompetencyGroupSchema,
+  createCompetencySchema,
+  updateCompetencySchema,
+  deleteCompetencySchema,
+  listCompetenciesParamsSchema,
+} from '@/lib/competency.schemas'
+import { db } from '@/db'
+import { competencyGroups, competencies, competencyLevels, users } from '@/db/schema'
+import { verifyToken } from '@/lib/auth.utils'
+
+// ==================== HELPER FUNCTIONS ====================
+
+/**
+ * Verify user has Admin or HR role
+ */
+async function verifyAdminOrHR(token: string) {
+  const payload = verifyToken(token)
+  if (!payload) {
+    throw new Error('Invalid or expired token')
+  }
+
+  const user = await db.query.users.findFirst({
+    where: and(eq(users.id, payload.id), isNull(users.deletedAt)),
+    with: {
+      role: true,
+    },
+  })
+
+  if (!user || !user.role) {
+    throw new Error('User not found or has no role')
+  }
+
+  if (!['ADMIN', 'HR'].includes(user.role.roleName)) {
+    throw new Error('Insufficient permissions. Admin or HR role required.')
+  }
+
+  return user
+}
+
+/**
+ * Check if group name already exists (case-insensitive)
+ */
+async function isGroupNameUnique(
+  name: string,
+  excludeGroupId?: number,
+): Promise<boolean> {
+  const existing = await db.query.competencyGroups.findFirst({
+    where: and(
+      ilike(competencyGroups.name, name),
+      excludeGroupId ? sql`${competencyGroups.id} != ${excludeGroupId}` : undefined,
+    ),
+  })
+
+  return !existing
+}
+
+/**
+ * Check if competency name already exists within group (case-insensitive)
+ */
+async function isCompetencyNameUnique(
+  name: string,
+  groupId: number,
+  excludeCompetencyId?: number,
+): Promise<boolean> {
+  const existing = await db.query.competencies.findFirst({
+    where: and(
+      eq(competencies.groupId, groupId),
+      ilike(competencies.name, name),
+      excludeCompetencyId
+        ? sql`${competencies.id} != ${excludeCompetencyId}`
+        : undefined,
+    ),
+  })
+
+  return !existing
+}
+
+// ==================== COMPETENCY GROUP FUNCTIONS ====================
+
+/**
+ * Get all competency groups with count of competencies
+ */
+export const getCompetencyGroupsFn = createServerFn({ method: 'POST' }).handler(
+  async (ctx) => {
+    const schema = z.object({ token: z.string() })
+    const data = schema.parse(ctx.data)
+
+    await verifyAdminOrHR(data.token)
+
+    const groups = await db
+      .select({
+        id: competencyGroups.id,
+        name: competencyGroups.name,
+        description: competencyGroups.description,
+        createdAt: competencyGroups.createdAt,
+        competencyCount: count(competencies.id),
+      })
+      .from(competencyGroups)
+      .leftJoin(competencies, eq(competencies.groupId, competencyGroups.id))
+      .groupBy(competencyGroups.id)
+      .orderBy(competencyGroups.name)
+
+    return {
+      success: true,
+      data: groups,
+    }
+  },
+)
+
+/**
+ * Create a new competency group
+ */
+export const createCompetencyGroupFn = createServerFn({ method: 'POST' }).handler(
+  async (ctx) => {
+    const schema = z.object({
+      token: z.string(),
+      data: createCompetencyGroupSchema,
+    })
+    const data = schema.parse(ctx.data)
+
+    await verifyAdminOrHR(data.token)
+
+    // Check name uniqueness
+    const isUnique = await isGroupNameUnique(data.data.name)
+    if (!isUnique) {
+      throw new Error(
+        `Competency group "${data.data.name}" already exists. Please use a different name.`,
+      )
+    }
+
+    const [newGroup] = await db
+      .insert(competencyGroups)
+      .values({
+        name: data.data.name,
+        description: data.data.description || null,
+      })
+      .returning()
+
+    return {
+      success: true,
+      data: newGroup,
+    }
+  },
+)
+
+/**
+ * Update an existing competency group
+ */
+export const updateCompetencyGroupFn = createServerFn({ method: 'POST' }).handler(
+  async (ctx) => {
+    const schema = z.object({
+      token: z.string(),
+      data: updateCompetencyGroupSchema,
+    })
+    const data = schema.parse(ctx.data)
+
+    await verifyAdminOrHR(data.token)
+
+    const { groupId, data: updates } = data.data
+
+    // Check if group exists
+    const existingGroup = await db.query.competencyGroups.findFirst({
+      where: eq(competencyGroups.id, groupId),
+    })
+
+    if (!existingGroup) {
+      throw new Error('Competency group not found')
+    }
+
+    // Check name uniqueness if name is being updated
+    if (updates.name) {
+      const isUnique = await isGroupNameUnique(updates.name, groupId)
+      if (!isUnique) {
+        throw new Error(
+          `Competency group "${updates.name}" already exists. Please use a different name.`,
+        )
+      }
+    }
+
+    const [updatedGroup] = await db
+      .update(competencyGroups)
+      .set({
+        name: updates.name || existingGroup.name,
+        description:
+          updates.description !== undefined
+            ? updates.description
+            : existingGroup.description,
+      })
+      .where(eq(competencyGroups.id, groupId))
+      .returning()
+
+    return {
+      success: true,
+      data: updatedGroup,
+    }
+  },
+)
+
+/**
+ * Delete a competency group (only if it has no competencies)
+ */
+export const deleteCompetencyGroupFn = createServerFn({ method: 'POST' }).handler(
+  async (ctx) => {
+    const schema = z.object({
+      token: z.string(),
+      data: deleteCompetencyGroupSchema,
+    })
+    const data = schema.parse(ctx.data)
+
+    await verifyAdminOrHR(data.token)
+
+    const { groupId } = data.data
+
+    // Check if group exists
+    const existingGroup = await db.query.competencyGroups.findFirst({
+      where: eq(competencyGroups.id, groupId),
+    })
+
+    if (!existingGroup) {
+      throw new Error('Competency group not found')
+    }
+
+    // Check if group has any competencies
+    const competenciesInGroup = await db
+      .select({ count: count() })
+      .from(competencies)
+      .where(eq(competencies.groupId, groupId))
+
+    if (competenciesInGroup[0].count > 0) {
+      throw new Error(
+        `Cannot delete group "${existingGroup.name}". It contains ${competenciesInGroup[0].count} competenc${competenciesInGroup[0].count === 1 ? 'y' : 'ies'}. Please delete or move the competencies first.`,
+      )
+    }
+
+    await db.delete(competencyGroups).where(eq(competencyGroups.id, groupId))
+
+    return {
+      success: true,
+      message: `Competency group "${existingGroup.name}" deleted successfully`,
+    }
+  },
+)
+
+// ==================== COMPETENCY FUNCTIONS ====================
+
+/**
+ * Get competencies with their levels and group info
+ */
+export const getCompetenciesFn = createServerFn({ method: 'POST' }).handler(
+  async (ctx) => {
+    const schema = z.object({
+      token: z.string(),
+      params: listCompetenciesParamsSchema.optional(),
+    })
+    const data = schema.parse(ctx.data)
+
+    await verifyAdminOrHR(data.token)
+
+    const params = data.params || {}
+
+    // Apply filters
+    const filters: any[] = []
+
+    if (params.groupId) {
+      filters.push(eq(competencies.groupId, params.groupId))
+    }
+
+    if (params.search) {
+      filters.push(ilike(competencies.name, `%${params.search}%`))
+    }
+
+    // Execute with filters
+    const allCompetencies = await db.query.competencies.findMany({
+      where: filters.length > 0 ? and(...filters) : undefined,
+      with: {
+        group: true,
+        levels: {
+          orderBy: (levels, { asc }) => [asc(levels.levelNumber)],
+        },
+      },
+      orderBy: (competencies, { asc }) => [asc(competencies.name)],
+    })
+
+    return {
+      success: true,
+      data: allCompetencies,
+    }
+  },
+)
+
+/**
+ * Create a new competency with all 5 levels
+ */
+export const createCompetencyFn = createServerFn({ method: 'POST' }).handler(
+  async (ctx) => {
+    const schema = z.object({
+      token: z.string(),
+      data: createCompetencySchema,
+    })
+    const data = schema.parse(ctx.data)
+
+    await verifyAdminOrHR(data.token)
+
+    const { groupId, name, description, levels } = data.data
+
+    // Check if group exists
+    const group = await db.query.competencyGroups.findFirst({
+      where: eq(competencyGroups.id, groupId),
+    })
+
+    if (!group) {
+      throw new Error('Competency group not found')
+    }
+
+    // Check name uniqueness within group
+    const isUnique = await isCompetencyNameUnique(name, groupId)
+    if (!isUnique) {
+      throw new Error(
+        `Competency "${name}" already exists in group "${group.name}". Please use a different name.`,
+      )
+    }
+
+    // Create competency
+    const [newCompetency] = await db
+      .insert(competencies)
+      .values({
+        groupId,
+        name,
+        description: description || null,
+      })
+      .returning()
+
+    // Create all 5 levels
+    const levelValues = levels.map(
+      (level: { levelNumber: number; behavioralIndicator: string }) => ({
+        competencyId: newCompetency.id,
+        levelNumber: level.levelNumber,
+        behavioralIndicator: level.behavioralIndicator,
+      }),
+    )
+
+    const createdLevels = await db
+      .insert(competencyLevels)
+      .values(levelValues)
+      .returning()
+
+    return {
+      success: true,
+      data: {
+        ...newCompetency,
+        group,
+        levels: createdLevels,
+      },
+    }
+  },
+)
+
+/**
+ * Update an existing competency and its levels
+ */
+export const updateCompetencyFn = createServerFn({ method: 'POST' }).handler(
+  async (ctx) => {
+    const schema = z.object({
+      token: z.string(),
+      data: updateCompetencySchema,
+    })
+    const data = schema.parse(ctx.data)
+
+    await verifyAdminOrHR(data.token)
+
+    const { competencyId, data: updates } = data.data
+
+    // Check if competency exists
+    const existingCompetency = await db.query.competencies.findFirst({
+      where: eq(competencies.id, competencyId),
+      with: {
+        levels: {
+          orderBy: (levels, { asc }) => [asc(levels.levelNumber)],
+        },
+      },
+    })
+
+    if (!existingCompetency) {
+      throw new Error('Competency not found')
+    }
+
+    // Check group exists if being updated
+    if (updates.groupId) {
+      const group = await db.query.competencyGroups.findFirst({
+        where: eq(competencyGroups.id, updates.groupId),
+      })
+      if (!group) {
+        throw new Error('Competency group not found')
+      }
+    }
+
+    // Check name uniqueness if being updated
+    if (updates.name) {
+      const targetGroupId = updates.groupId || existingCompetency.groupId
+      const isUnique = await isCompetencyNameUnique(
+        updates.name,
+        targetGroupId,
+        competencyId,
+      )
+      if (!isUnique) {
+        throw new Error(
+          `Competency "${updates.name}" already exists in this group. Please use a different name.`,
+        )
+      }
+    }
+
+    // Update competency
+    await db
+      .update(competencies)
+      .set({
+        groupId: updates.groupId || existingCompetency.groupId,
+        name: updates.name || existingCompetency.name,
+        description:
+          updates.description !== undefined
+            ? updates.description
+            : existingCompetency.description,
+      })
+      .where(eq(competencies.id, competencyId))
+
+    // Update levels if provided
+    if (updates.levels) {
+      // Delete existing levels
+      await db
+        .delete(competencyLevels)
+        .where(eq(competencyLevels.competencyId, competencyId))
+
+      // Insert new levels
+      const levelValues = updates.levels.map(
+        (level: { levelNumber: number; behavioralIndicator: string }) => ({
+          competencyId,
+          levelNumber: level.levelNumber,
+          behavioralIndicator: level.behavioralIndicator,
+        }),
+      )
+
+      await db.insert(competencyLevels).values(levelValues)
+    }
+
+    // Fetch updated competency with levels and group
+    const result = await db.query.competencies.findFirst({
+      where: eq(competencies.id, competencyId),
+      with: {
+        group: true,
+        levels: {
+          orderBy: (levels, { asc }) => [asc(levels.levelNumber)],
+        },
+      },
+    })
+
+    return {
+      success: true,
+      data: result,
+    }
+  },
+)
+
+/**
+ * Soft delete a competency (cascade to levels)
+ */
+export const deleteCompetencyFn = createServerFn({ method: 'POST' }).handler(
+  async (ctx) => {
+    const schema = z.object({
+      token: z.string(),
+      data: deleteCompetencySchema,
+    })
+    const data = schema.parse(ctx.data)
+
+    await verifyAdminOrHR(data.token)
+
+    const { competencyId } = data.data
+
+    // Check if competency exists
+    const existingCompetency = await db.query.competencies.findFirst({
+      where: eq(competencies.id, competencyId),
+    })
+
+    if (!existingCompetency) {
+      throw new Error('Competency not found')
+    }
+
+    // Delete competency (cascade will handle levels due to DB constraints)
+    await db.delete(competencies).where(eq(competencies.id, competencyId))
+
+    return {
+      success: true,
+      message: `Competency "${existingCompetency.name}" deleted successfully`,
+    }
+  },
+)

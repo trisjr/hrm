@@ -1,11 +1,13 @@
 import {
   HeadContent,
   Scripts,
-  createRootRoute,
+  createRootRouteWithContext,
   useRouter,
+  Outlet,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
+import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
 import * as React from 'react'
 
 import appCss from '../styles.css?url'
@@ -17,7 +19,11 @@ import { NotFound } from '@/components/not-found'
 
 const publicPaths = ['/login', '/register', '/change-password']
 
-export const Route = createRootRoute({
+interface MyRouterContext {
+  queryClient: QueryClient
+}
+
+export const Route = createRootRouteWithContext<MyRouterContext>()({
   head: () => ({
     meta: [
       {
@@ -39,12 +45,13 @@ export const Route = createRootRoute({
     ],
   }),
 
-  shellComponent: RootDocument,
+  component: RootDocument,
   notFoundComponent: NotFound,
 })
 
-function RootDocument({ children }: { children: React.ReactNode }) {
+function RootDocument() {
   const router = useRouter()
+  const { queryClient } = Route.useRouteContext()
   const {
     token,
     isAuthenticated,
@@ -145,19 +152,21 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        {isPublicPath ? children : <AdminLayout>{children}</AdminLayout>}
-        <Toaster position="top-right" richColors />
-        <TanStackDevtools
-          config={{
-            position: 'bottom-right',
-          }}
-          plugins={[
-            {
-              name: 'Tanstack Router',
-              render: <TanStackRouterDevtoolsPanel />,
-            },
-          ]}
-        />
+        <QueryClientProvider client={queryClient}>
+          {isPublicPath ? <Outlet /> : <AdminLayout><Outlet /></AdminLayout>}
+          <Toaster position="top-right" richColors />
+          <TanStackDevtools
+            config={{
+              position: 'bottom-right',
+            }}
+            plugins={[
+              {
+                name: 'Tanstack Router',
+                render: <TanStackRouterDevtoolsPanel />,
+              },
+            ]}
+          />
+        </QueryClientProvider>
         <Scripts />
       </body>
     </html>

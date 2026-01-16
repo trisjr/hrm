@@ -8,8 +8,8 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth.store'
 import { createProfileUpdateRequestFn } from '@/server/profile-request.server'
-import { createProfileUpdateRequestSchema } from '@/lib/profile-request.schemas'
 import type { CreateProfileUpdateRequestInput } from '@/lib/profile-request.schemas'
+import { createProfileUpdateRequestSchema } from '@/lib/profile-request.schemas'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -22,7 +22,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -117,7 +116,7 @@ export function ProfileEditDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-150 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Profile</DialogTitle>
           <DialogDescription>
@@ -265,7 +264,7 @@ export function ProfileEditDialog({
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
-                            variant={'outline'}
+                            variant="outline"
                             className={cn(
                               'w-full pl-3 text-left font-normal',
                               !field.value && 'text-muted-foreground',
