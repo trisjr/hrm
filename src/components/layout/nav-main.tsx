@@ -11,6 +11,7 @@ import {
   IconTarget,
   IconUsers,
   IconUserEdit,
+  IconUsersGroup,
 } from '@tabler/icons-react'
 import { useNavigate, useRouter } from '@tanstack/react-router'
 import {
@@ -80,6 +81,12 @@ const ALL_MENU_ITEMS: Array<MenuItem> = [
     title: 'User Management',
     url: '/admin/users',
     icon: IconUsers,
+    roles: ['ADMIN', 'HR'],
+  },
+  {
+    title: 'Team Management',
+    url: '/admin/teams',
+    icon: IconUsersGroup,
     roles: ['ADMIN', 'HR'],
   },
   {
