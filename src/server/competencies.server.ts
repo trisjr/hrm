@@ -869,24 +869,31 @@ export const updateAssessmentCycleFn = createServerFn({
   }
 
   // Validate dates if being updated
-  const newStartDate = updates.startDate || existing.startDate
-  const newEndDate = updates.endDate || existing.endDate
+  const dateStart = updates.startDate
+    ? new Date(updates.startDate)
+    : new Date(existing.startDate)
+  const dateEnd = updates.endDate
+    ? new Date(updates.endDate)
+    : new Date(existing.endDate)
 
-  if (newEndDate <= newStartDate) {
+  if (dateEnd <= dateStart) {
     throw new Error('End date must be after start date')
   }
+
+  const startDateStr = dateStart.toISOString().split('T')[0]
+  const endDateStr = dateEnd.toISOString().split('T')[0]
 
   // Check for overlapping if dates changed and status is ACTIVE
   const newStatus = updates.status || existing.status
   if (
     newStatus === 'ACTIVE' &&
-    (updates.startDate || updates.endDate)
+    (updates.startDate || updates.endDate || updates.status === 'ACTIVE')
   ) {
     const overlapping = await db.query.assessmentCycles.findFirst({
       where: and(
         eq(assessmentCycles.status, 'ACTIVE'),
         sql`${assessmentCycles.id} != ${cycleId}`,
-        sql`${assessmentCycles.startDate} <= ${newEndDate} AND ${assessmentCycles.endDate} >= ${newStartDate}`,
+        sql`${assessmentCycles.startDate} <= ${endDateStr} AND ${assessmentCycles.endDate} >= ${startDateStr}`,
       ),
     })
 
@@ -902,10 +909,10 @@ export const updateAssessmentCycleFn = createServerFn({
   }
 
   if (updates.startDate) {
-    updateData.startDate = newStartDate
+    updateData.startDate = startDateStr
   }
   if (updates.endDate) {
-    updateData.endDate = newEndDate
+    updateData.endDate = endDateStr
   }
   if (updates.status) {
     updateData.status = newStatus
