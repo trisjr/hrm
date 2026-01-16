@@ -807,6 +807,10 @@ export const createAssessmentCycleFn = createServerFn({
   const { name, startDate, endDate } = data.data
 
   // Validate dates
+  const startDateStr = startDate.toISOString().split('T')[0]
+  const endDateStr = endDate.toISOString().split('T')[0]
+
+  // Validate dates
   if (endDate <= startDate) {
     throw new Error('End date must be after start date')
   }
@@ -815,7 +819,7 @@ export const createAssessmentCycleFn = createServerFn({
   const overlapping = await db.query.assessmentCycles.findFirst({
     where: and(
       eq(assessmentCycles.status, 'ACTIVE'),
-      sql`${assessmentCycles.startDate} <= ${endDate} AND ${assessmentCycles.endDate} >= ${startDate}`,
+      sql`${assessmentCycles.startDate} <= ${endDateStr} AND ${assessmentCycles.endDate} >= ${startDateStr}`,
     ),
   })
 
@@ -829,8 +833,8 @@ export const createAssessmentCycleFn = createServerFn({
     .insert(assessmentCycles)
     .values({
       name,
-      startDate: startDate.toISOString().split('T')[0], // YYYY-MM-DD
-      endDate: endDate.toISOString().split('T')[0],
+      startDate: startDateStr,
+      endDate: endDateStr,
       status: 'ACTIVE' as const,
     } as any)
     .returning()
