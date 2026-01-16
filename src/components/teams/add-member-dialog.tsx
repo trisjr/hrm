@@ -1,21 +1,25 @@
 import * as React from 'react'
-import { IconSearch } from '@tabler/icons-react'
+import {
+  IconLoader2,
+  IconSearch,
+  IconUser,
+  IconUserPlus,
+} from '@tabler/icons-react'
 import type { TeamMember } from '@/lib/team.schemas'
-import { listUsersFn } from '@/server/users.server'
+import { getRolesFn, listUsersFn } from '@/server/users.server'
 import { useAuthStore } from '@/store/auth.store'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Badge } from '@/components/ui/badge'
 
 interface AddMemberDialogProps {
   open: boolean
@@ -37,33 +41,54 @@ interface AvailableUser {
 export function AddMemberDialog({
   open,
   onOpenChange,
-  teamId,
   currentMembers,
   onSubmit,
 }: AddMemberDialogProps) {
   const { token } = useAuthStore()
-  const [selectedUserId, setSelectedUserId] = React.useState<string>('')
-  const [isSubmitting, setIsSubmitting] = React.useState(false)
-  const [availableUsers, setAvailableUsers] = React.useState<AvailableUser[]>([])
-  const [isLoading, setIsLoading] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState('')
+  const [debouncedQuery, setDebouncedQuery] = React.useState('')
+  const [availableUsers, setAvailableUsers] = React.useState<AvailableUser[]>(
+    [],
+  )
+  const [addingUserId, setAddingUserId] = React.useState<number | null>(null)
+  const [devRoleId, setDevRoleId] = React.useState<number | null>(null)
 
-  // Fetch available users (not in current team)
+  // Debounce search input
   React.useEffect(() => {
-    if (!open || !token) return
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  // Initial setup: Get DEV role ID
+  React.useEffect(() => {
+    if (!token || !open) return
+    const fetchRole = async () => {
+      const roles = await getRolesFn()
+      const dev = roles.find((r) => r.roleName === 'DEV')
+      if (dev) setDevRoleId(dev.id)
+    }
+    fetchRole()
+  }, [token, open])
+
+  // Search users when debounced query changes
+  React.useEffect(() => {
+    if (!open || !token || !devRoleId) return
 
     const fetchUsers = async () => {
-      setIsLoading(true)
       try {
         const response = await listUsersFn({
           data: {
             page: 1,
-            limit: 100,
+            limit: 20, // Fetch top 20 matches
             status: 'ACTIVE',
+            roleId: devRoleId,
+            search: debouncedQuery || undefined,
           },
         })
 
-        // Filter out current team members
+        // Filter out current team members locally (to be safe)
         const currentMemberIds = new Set(currentMembers.map((m) => m.id))
         const available = response.users
           .filter((user) => !currentMemberIds.has(user.id))
@@ -79,139 +104,114 @@ export function AddMemberDialog({
         setAvailableUsers(available)
       } catch (error) {
         console.error('Failed to fetch users:', error)
-      } finally {
-        setIsLoading(false)
       }
     }
 
     fetchUsers()
-  }, [open, token, currentMembers])
+  }, [open, token, debouncedQuery, devRoleId, currentMembers])
 
-  // Filter users by search query
-  const filteredUsers = React.useMemo(() => {
-    if (!searchQuery) return availableUsers
-
-    const query = searchQuery.toLowerCase()
-    return availableUsers.filter(
-      (user) =>
-        user.fullName.toLowerCase().includes(query) ||
-        user.email.toLowerCase().includes(query) ||
-        user.employeeCode.toLowerCase().includes(query),
-    )
-  }, [availableUsers, searchQuery])
-
-  // Reset on open
+  // Reset state on close
   React.useEffect(() => {
-    if (open) {
-      setSelectedUserId('')
+    if (!open) {
       setSearchQuery('')
+      setAddingUserId(null)
     }
   }, [open])
 
-  const handleSubmit = async () => {
-    if (!selectedUserId) return
-
-    setIsSubmitting(true)
+  const handleAdd = async (userId: number) => {
+    setAddingUserId(userId)
     try {
-      await onSubmit(Number(selectedUserId))
-      setSelectedUserId('')
-    } catch (error) {
-      // Error handled by parent
+      await onSubmit(userId)
     } finally {
-      setIsSubmitting(false)
+      setAddingUserId(null)
     }
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Add Team Member</DialogTitle>
+      <DialogContent className="sm:max-w-150 p-0 gap-0 overflow-hidden">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b">
+          <DialogTitle>Add Team Members</DialogTitle>
           <DialogDescription>
-            Select a user to add to this team. Only active users who are not
-            already members can be added.
+            Search and add developers to your team.
           </DialogDescription>
         </DialogHeader>
 
-        {/* Search */}
-        <div className="relative">
-          <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search by name, email, or ID..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
+        <div className="p-4 border-b bg-muted/30">
+          <div className="relative">
+            <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search by name, email, or ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 bg-background border-muted-foreground/20"
+              autoFocus
+            />
+          </div>
         </div>
 
-        <div className="py-4">
-          {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Loading users...
-            </div>
-          ) : filteredUsers.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {searchQuery
-                ? 'No users found matching your search.'
-                : 'No available users to add.'}
+        <ScrollArea className="h-100 p-2">
+          {availableUsers.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-75 text-muted-foreground gap-2">
+              <div className="bg-muted p-4 rounded-full">
+                <IconUser className="h-8 w-8 text-muted-foreground/50" />
+              </div>
+              <p>
+                {searchQuery
+                  ? 'No users found.'
+                  : 'Start typing to search users.'}
+              </p>
             </div>
           ) : (
-            <RadioGroup
-              value={selectedUserId}
-              onValueChange={setSelectedUserId}
-              className="space-y-3 max-h-[400px] overflow-y-auto"
-            >
-              {filteredUsers.map((user) => (
+            <div className="space-y-1">
+              {availableUsers.map((user) => (
                 <div
                   key={user.id}
-                  className="flex items-center space-x-3 rounded-lg border p-4 hover:bg-accent cursor-pointer"
+                  className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors group"
                 >
-                  <RadioGroupItem
-                    value={user.id.toString()}
-                    id={user.id.toString()}
-                  />
-                  <Label
-                    htmlFor={user.id.toString()}
-                    className="flex flex-1 items-center gap-3 cursor-pointer"
-                  >
-                    <Avatar className="h-10 w-10">
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <Avatar className="h-10 w-10 border-2 border-background">
                       <AvatarImage src={user.avatarUrl || undefined} />
-                      <AvatarFallback>
+                      <AvatarFallback className="bg-primary/10 text-primary">
                         {user.fullName.charAt(0)}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="flex-1">
-                      <div className="font-medium">{user.fullName}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {user.email}
+                    <div className="truncate">
+                      <div className="font-medium truncate">
+                        {user.fullName}
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        ID: {user.employeeCode} • Role: {user.roleName || 'N/A'}
+                      <div className="text-sm text-muted-foreground truncate flex items-center gap-2">
+                        {user.email}
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] h-5 px-1 font-normal text-muted-foreground"
+                        >
+                          {user.employeeCode}
+                        </Badge>
                       </div>
                     </div>
-                  </Label>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="opacity-0 group-hover:opacity-100 transition-opacity gap-2 hover:bg-primary hover:text-primary-foreground"
+                    disabled={addingUserId !== null}
+                    onClick={() => handleAdd(user.id)}
+                  >
+                    {addingUserId === user.id ? (
+                      <IconLoader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <IconUserPlus className="h-4 w-4" />
+                        Add
+                      </>
+                    )}
+                  </Button>
                 </div>
               ))}
-            </RadioGroup>
+            </div>
           )}
-        </div>
-
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={isSubmitting || !selectedUserId}
-          >
-            {isSubmitting ? 'Adding...' : 'Add Member'}
-          </Button>
-        </DialogFooter>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   )

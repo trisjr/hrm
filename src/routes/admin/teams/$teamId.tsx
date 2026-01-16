@@ -1,15 +1,20 @@
 import * as React from 'react'
-import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
+import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
 import {
   IconArrowLeft,
-  IconUsers,
-  IconClipboardList,
   IconChartBar,
+  IconClipboardList,
+  IconUsers,
 } from '@tabler/icons-react'
 import { toast } from 'sonner'
-import { getTeamByIdFn, assignLeaderFn, addMemberToTeamFn, removeMemberFromTeamFn } from '@/server/teams.server'
+import {
+  addMemberToTeamFn,
+  assignLeaderFn,
+  getTeamByIdFn,
+  removeMemberFromTeamFn,
+} from '@/server/teams.server'
 import { useAuthStore } from '@/store/auth.store'
-import type { TeamDetail } from '@/lib/team.schemas'
+import type { TeamDetail, TeamMember } from '@/lib/team.schemas'
 import { Button } from '@/components/ui/button'
 import {
   Breadcrumb,
@@ -24,7 +29,6 @@ import { TeamMembersTable } from '@/components/teams/team-members-table'
 import { AssignLeaderDialog } from '@/components/teams/assign-leader-dialog'
 import { AddMemberDialog } from '@/components/teams/add-member-dialog'
 import { RemoveMemberDialog } from '@/components/teams/remove-member-dialog'
-import type { TeamMember } from '@/lib/team.schemas'
 
 export const Route = createFileRoute('/admin/teams/$teamId')({
   component: RouteComponent,
@@ -36,16 +40,16 @@ function RouteComponent() {
   const router = useRouter()
 
   const [team, setTeam] = React.useState<TeamDetail | null>(null)
-  const [isLoading, setIsLoading] = React.useState(true)
   const [isAssignLeaderOpen, setIsAssignLeaderOpen] = React.useState(false)
   const [isAddMemberOpen, setIsAddMemberOpen] = React.useState(false)
-  const [memberToRemove, setMemberToRemove] = React.useState<TeamMember | null>(null)
+  const [memberToRemove, setMemberToRemove] = React.useState<TeamMember | null>(
+    null,
+  )
 
   // Fetch team details
   const fetchTeam = React.useCallback(async () => {
     if (!token) return
 
-    setIsLoading(true)
     try {
       const teamData = await getTeamByIdFn({
         data: {
@@ -62,7 +66,6 @@ function RouteComponent() {
       // Navigate back if team not found
       router.navigate({ to: '/admin/teams' })
     } finally {
-      setIsLoading(false)
     }
   }, [token, teamId, router])
 
@@ -122,7 +125,6 @@ function RouteComponent() {
       })
 
       toast.success('Member added successfully')
-      setIsAddMemberOpen(false)
       fetchTeam()
     } catch (error: any) {
       toast.error('Failed to add member', {
@@ -161,7 +163,7 @@ function RouteComponent() {
     }
   }
 
-  if (isLoading || !team) {
+  if (!team) {
     return (
       <div className="flex items-center justify-center py-8">
         <div className="text-muted-foreground">Loading team details...</div>
@@ -231,9 +233,7 @@ function RouteComponent() {
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Members
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Total Members</CardTitle>
             <IconUsers className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
