@@ -822,14 +822,14 @@ const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' })
   - [ ] Approval rate chart
 - [ ] Implement `getTeamAnalyticsFn` backend
 
-### Phase 5: Excel Export (2-3 hours)
+### Phase 5: Excel Export (2-3 hours) [Skipped]
 
-- [ ] Install `xlsx` package
-- [ ] Implement `exportTeamsToExcelFn`
-  - [ ] Generate Excel with team data
-  - [ ] Format columns properly
-- [ ] Add "Export" button to Teams page
-- [ ] Handle file download in browser
+- [-] Install `xlsx` package
+- [-] Implement `exportTeamsToExcelFn`
+  - [-] Generate Excel with team data
+  - [-] Format columns properly
+- [-] Add "Export" button to Teams page
+- [-] Handle file download in browser
 
 ### Phase 6: Email Notifications (2-3 hours)
 

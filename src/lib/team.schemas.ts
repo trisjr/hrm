@@ -210,18 +210,29 @@ export type PaginatedTeams = z.infer<typeof paginatedTeamsSchema>
  */
 export const teamAnalyticsSchema = z.object({
   totalTeams: z.number().int().min(0),
+  totalMembers: z.number().int().min(0),
+  totalLeaders: z.number().int().min(0),
   avgTeamSize: z.number().min(0),
+  teamsWithLeader: z.number().int().min(0),
   teamsWithoutLeader: z.number().int().min(0),
   teamSizeDistribution: z.array(
     z.object({
-      size: z.string(),
-      count: z.number().int().min(0),
+      name: z.string(), // e.g., "1-5 Members"
+      value: z.number().int().min(0),
     }),
   ),
-  requestApprovalRates: z.array(
+  leaderStatus: z.array(
     z.object({
+      name: z.string(), // "Assigned", "Unassigned"
+      value: z.number().int().min(0),
+      fill: z.string().optional(),
+    }),
+  ),
+  largestTeams: z.array(
+    z.object({
+      id: z.number(),
       teamName: z.string(),
-      rate: z.number().min(0).max(100),
+      memberCount: z.number().int().min(0),
     }),
   ),
 })

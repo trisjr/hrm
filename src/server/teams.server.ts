@@ -7,6 +7,8 @@ import { and, count, eq, ilike, inArray, isNull, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '@/db'
 import {
+  emailLogs,
+  emailTemplates,
   attendanceLogs,
   profiles,
   roles,
@@ -14,6 +16,7 @@ import {
   users,
   workRequests,
 } from '@/db/schema'
+import { replacePlaceholders, sendEmail } from '@/lib/email.utils'
 import {
   type AddMemberToTeamInput,
   addMemberToTeamSchema,
@@ -36,6 +39,8 @@ import {
   type TeamWithStats,
   type UpdateTeamInput,
   updateTeamSchema,
+  getTeamAnalyticsSchema,
+  teamAnalyticsSchema,
 } from '@/lib/team.schemas'
 import { verifyToken } from '@/lib/auth.utils'
 
@@ -99,6 +104,48 @@ async function isUserInTeam(userId: number, teamId: number): Promise<boolean> {
   })
 
   return !!user
+}
+
+/**
+ * Helper to send team-related emails
+ */
+async function sendTeamEmail(
+  templateCode: string,
+  recipient: { email: string; fullName: string; id: number },
+  data: Record<string, string>,
+  senderId: number,
+) {
+  try {
+    const template = await db.query.emailTemplates.findFirst({
+      where: eq(emailTemplates.code, templateCode),
+    })
+
+    if (!template) {
+      console.warn(`Email template ${templateCode} not found`)
+      return
+    }
+
+    const values = { ...data, fullName: recipient.fullName }
+    const subject = replacePlaceholders(template.subject, values)
+    const body = replacePlaceholders(template.body, values)
+
+    // Send email
+    const emailResult = await sendEmail(recipient.email, subject, body)
+
+    // Log email
+    await db.insert(emailLogs).values({
+      templateId: template.id,
+      senderId,
+      recipientEmail: recipient.email,
+      subject,
+      body,
+      status: emailResult.success ? 'SENT' : 'FAILED',
+      sentAt: emailResult.success ? new Date() : null,
+      errorMessage: emailResult.error || null,
+    })
+  } catch (error) {
+    console.error(`Failed to send team email (${templateCode}):`, error)
+  }
 }
 
 // ==================== SERVER FUNCTIONS ====================
@@ -545,7 +592,7 @@ export const deleteTeamFn = createServerFn({ method: 'POST' })
       const { token, data } = input
 
       // Verify permissions
-      await verifyAdminOrHR(token)
+      const requester = await verifyAdminOrHR(token)
 
       const { teamId } = data
 
@@ -586,7 +633,22 @@ export const deleteTeamFn = createServerFn({ method: 'POST' })
           .where(eq(users.teamId, teamId))
       }
 
-      // TODO: Send email notifications to affected members
+      // Send email notifications to affected members
+      // Use Promise.all to send in parallel (or consider a queue for large teams)
+      await Promise.all(
+        members.map((member) =>
+          sendTeamEmail(
+            'TEAM_DELETED',
+            {
+              email: member.email,
+              fullName: member.profile?.fullName || 'Valued Member',
+              id: member.id,
+            },
+            { teamName: team.teamName },
+            requester.id,
+          ),
+        ),
+      )
 
       const result: DeleteTeamResponse = {
         success: true,
@@ -618,7 +680,7 @@ export const addMemberToTeamFn = createServerFn({ method: 'POST' })
       const { token, data } = input
 
       // Verify permissions
-      await verifyAdminOrHR(token)
+      const requester = await verifyAdminOrHR(token)
 
       const { teamId, userId } = data
 
@@ -658,7 +720,20 @@ export const addMemberToTeamFn = createServerFn({ method: 'POST' })
         .from(users)
         .where(and(eq(users.teamId, teamId), isNull(users.deletedAt)))
 
-      // TODO: Send welcome email to user
+      // Send welcome email to user
+      await sendTeamEmail(
+        'TEAM_MEMBER_ADDED',
+        {
+          email: user.email,
+          fullName: user.profile?.fullName || 'New Member',
+          id: user.id,
+        },
+        {
+          teamName: team.teamName,
+          teamLink: `${process.env.APP_URL || 'http://localhost:3000'}/admin/teams/${team.id}`,
+        },
+        requester.id,
+      )
 
       return {
         success: true,
@@ -688,7 +763,7 @@ export const removeMemberFromTeamFn = createServerFn({ method: 'POST' })
       const { token, data } = input
 
       // Verify permissions
-      await verifyAdminOrHR(token)
+      const requester = await verifyAdminOrHR(token)
 
       const { teamId, userId } = data
 
@@ -733,7 +808,23 @@ export const removeMemberFromTeamFn = createServerFn({ method: 'POST' })
         })
         .where(eq(users.id, userId))
 
-      // TODO: Send notification email to user
+      // Send notification email to user
+      const userProfile = await db.query.profiles.findFirst({
+        where: eq(profiles.userId, userId),
+      })
+
+      if (user) {
+        await sendTeamEmail(
+          'TEAM_MEMBER_REMOVED',
+          {
+            email: user.email,
+            id: user.id,
+            fullName: userProfile?.fullName || 'Member',
+          },
+          { teamName: team?.teamName || 'the team' },
+          requester.id,
+        )
+      }
 
       return {
         success: true,
@@ -762,7 +853,7 @@ export const assignLeaderFn = createServerFn({ method: 'POST' })
       const { token, data } = input
 
       // Verify permissions
-      await verifyAdminOrHR(token)
+      const requester = await verifyAdminOrHR(token)
 
       const { teamId, leaderId } = data
 
@@ -856,10 +947,126 @@ export const assignLeaderFn = createServerFn({ method: 'POST' })
         }
       })
 
-      // TODO: Send emails to old and new leader
+      // Send emails to new leader
+      if (leaderId !== null) {
+        // Fetch new leader info
+        const newLeader = await db.query.users.findFirst({
+          where: eq(users.id, leaderId),
+          with: { profile: true },
+        })
+
+        if (newLeader) {
+          await sendTeamEmail(
+            'TEAM_LEADER_ASSIGNED',
+            {
+              email: newLeader.email,
+              fullName: newLeader.profile?.fullName || 'Leader',
+              id: newLeader.id,
+            },
+            {
+              teamName: team.teamName,
+              teamLink: `${process.env.APP_URL || 'http://localhost:3000'}/admin/teams/${team.id}`,
+            },
+            requester.id,
+          )
+        }
+      }
 
       return {
         success: true,
       }
     },
   )
+
+/**
+ * Get Team Analytics
+ * Aggregates statistics for team dashboard
+ */
+export const getTeamAnalyticsFn = createServerFn({ method: 'GET' })
+  .inputValidator((data: unknown) => {
+    return z
+      .object({
+        token: z.string(),
+        params: getTeamAnalyticsSchema.optional(),
+      })
+      .parse(data)
+  })
+  .handler(async ({ data }: { data: { token: string; params?: any } }) => {
+    // 1. Verify Authentication
+    await verifyAdminOrHR(data.token)
+
+    // 2. Fetch all teams with member counts
+    const allTeams = await db
+      .select({
+        id: teams.id,
+        teamName: teams.teamName,
+        leaderId: teams.leaderId,
+        memberCount: count(users.id),
+      })
+      .from(teams)
+      .leftJoin(users, and(eq(teams.id, users.teamId), isNull(users.deletedAt)))
+      .where(isNull(teams.deletedAt))
+      .groupBy(teams.id, teams.teamName, teams.leaderId)
+
+    // 3. Compute Aggregates
+    const totalTeams = allTeams.length
+    const totalMembers = allTeams.reduce((sum, t) => sum + t.memberCount, 0)
+    const teamsWithLeader = allTeams.filter((t) => t.leaderId !== null).length
+    const teamsWithoutLeader = totalTeams - teamsWithLeader
+    const totalLeaders = teamsWithLeader
+
+    const avgTeamSize =
+      totalTeams > 0 ? Number((totalMembers / totalTeams).toFixed(1)) : 0
+
+    // 4. Compute Size Distribution
+    const distribution = {
+      '1-5': 0,
+      '6-10': 0,
+      '11-20': 0,
+      '20+': 0,
+      'Empty': 0,
+    }
+
+    allTeams.forEach((t) => {
+      const c = t.memberCount
+      if (c === 0) distribution['Empty']++
+      else if (c <= 5) distribution['1-5']++
+      else if (c <= 10) distribution['6-10']++
+      else if (c <= 20) distribution['11-20']++
+      else distribution['20+']++
+    })
+
+    const teamSizeDistribution = [
+      { name: 'Empty', value: distribution['Empty'] },
+      { name: '1-5', value: distribution['1-5'] },
+      { name: '6-10', value: distribution['6-10'] },
+      { name: '11-20', value: distribution['11-20'] },
+      { name: '20+', value: distribution['20+'] },
+    ].filter((d) => d.value > 0)
+
+    // 5. Largest Teams
+    const largestTeams = [...allTeams]
+      .sort((a, b) => b.memberCount - a.memberCount)
+      .slice(0, 5)
+      .map((t) => ({
+        id: t.id,
+        teamName: t.teamName,
+        memberCount: t.memberCount,
+      }))
+
+    // 6. Return Response
+    return teamAnalyticsSchema.parse({
+      totalTeams,
+      totalMembers,
+      totalLeaders,
+      avgTeamSize,
+      teamsWithLeader,
+      teamsWithoutLeader,
+      teamSizeDistribution,
+      leaderStatus: [
+        { name: 'Assigned', value: teamsWithLeader, fill: '#10b981' }, // emerald-500
+        { name: 'Unassigned', value: teamsWithoutLeader, fill: '#ef4444' }, // red-500
+      ],
+      largestTeams,
+    })
+  })

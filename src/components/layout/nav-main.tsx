@@ -90,6 +90,12 @@ const ALL_MENU_ITEMS: Array<MenuItem> = [
     roles: ['ADMIN', 'HR'],
   },
   {
+    title: 'Team Analytics',
+    url: '/admin/teams/analytics',
+    icon: IconChartBar,
+    roles: ['ADMIN', 'HR'],
+  },
+  {
     title: 'Request Management',
     url: '/admin/requests',
     icon: IconClipboardList,

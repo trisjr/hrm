@@ -209,6 +209,220 @@ async function seed() {
       console.log('PASSWORD_RESET template already exists.')
     }
 
+    // 3c. Team Member Added Template
+    const teamMemberAddedTemplate = await db.query.emailTemplates.findFirst({
+      where: eq(emailTemplates.code, 'TEAM_MEMBER_ADDED'),
+    })
+
+    if (!teamMemberAddedTemplate) {
+      console.log('Creating TEAM_MEMBER_ADDED template...')
+      await db.insert(emailTemplates).values({
+        code: 'TEAM_MEMBER_ADDED',
+        name: 'Team Member Added',
+        subject: 'You have been added to {teamName}',
+        body: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background-color: #10B981; color: white; padding: 20px; text-align: center; }
+    .content { padding: 30px 20px; background: #f9fafb; }
+    .button { display: inline-block; padding: 12px 24px; background: #10B981; color: white; text-decoration: none; border-radius: 5px; }
+    .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Welcome to the Team!</h1>
+    </div>
+    <div class="content">
+      <p>Hello <strong>{fullName}</strong>,</p>
+      <p>You have been added to the team <strong>{teamName}</strong>.</p>
+      <p>We are excited to have you on board!</p>
+      <p style="text-align: center; margin: 30px 0;">
+        <a href="{teamLink}" class="button">View Team</a>
+      </p>
+    </div>
+    <div class="footer">
+      <p>&copy; 2026 Tech House HRM System. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>`,
+        variables: JSON.stringify({
+          fullName: "User's full name",
+          teamName: 'Name of the team',
+          teamLink: 'Link to team details',
+        }),
+        isSystem: true,
+      })
+      console.log('✅ TEAM_MEMBER_ADDED template created')
+    } else {
+      console.log('TEAM_MEMBER_ADDED template already exists.')
+    }
+
+    // 3d. Team Member Removed Template
+    const teamMemberRemovedTemplate = await db.query.emailTemplates.findFirst({
+      where: eq(emailTemplates.code, 'TEAM_MEMBER_REMOVED'),
+    })
+
+    if (!teamMemberRemovedTemplate) {
+      console.log('Creating TEAM_MEMBER_REMOVED template...')
+      await db.insert(emailTemplates).values({
+        code: 'TEAM_MEMBER_REMOVED',
+        name: 'Team Member Removed',
+        subject: 'You have been removed from {teamName}',
+        body: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background-color: #6B7280; color: white; padding: 20px; text-align: center; }
+    .content { padding: 30px 20px; background: #f9fafb; }
+    .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Team Membership Update</h1>
+    </div>
+    <div class="content">
+      <p>Hello <strong>{fullName}</strong>,</p>
+      <p>You have been removed from the team <strong>{teamName}</strong>.</p>
+      <p>If you believe this is a mistake, please contact your Hello HR.</p>
+    </div>
+    <div class="footer">
+      <p>&copy; 2026 Tech House HRM System. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>`,
+        variables: JSON.stringify({
+          fullName: "User's full name",
+          teamName: 'Name of the team',
+        }),
+        isSystem: true,
+      })
+      console.log('✅ TEAM_MEMBER_REMOVED template created')
+    } else {
+      console.log('TEAM_MEMBER_REMOVED template already exists.')
+    }
+
+    // 3e. Team Leader Assigned Template
+    const teamLeaderAssignedTemplate = await db.query.emailTemplates.findFirst({
+      where: eq(emailTemplates.code, 'TEAM_LEADER_ASSIGNED'),
+    })
+
+    if (!teamLeaderAssignedTemplate) {
+      console.log('Creating TEAM_LEADER_ASSIGNED template...')
+      await db.insert(emailTemplates).values({
+        code: 'TEAM_LEADER_ASSIGNED',
+        name: 'Team Leader Assigned',
+        subject: 'You represent the {teamName} team',
+        body: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background-color: #8B5CF6; color: white; padding: 20px; text-align: center; }
+    .content { padding: 30px 20px; background: #f9fafb; }
+    .button { display: inline-block; padding: 12px 24px; background: #8B5CF6; color: white; text-decoration: none; border-radius: 5px; }
+    .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Congratulations!</h1>
+    </div>
+    <div class="content">
+      <p>Hello <strong>{fullName}</strong>,</p>
+      <p>You have been assigned as the <strong>Leader</strong> of the team <strong>{teamName}</strong>.</p>
+      <p>Lead your team to success!</p>
+      <p style="text-align: center; margin: 30px 0;">
+        <a href="{teamLink}" class="button">Manage Team</a>
+      </p>
+    </div>
+    <div class="footer">
+      <p>&copy; 2026 Tech House HRM System. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>`,
+        variables: JSON.stringify({
+          fullName: "User's full name",
+          teamName: 'Name of the team',
+          teamLink: 'Link to team details',
+        }),
+        isSystem: true,
+      })
+      console.log('✅ TEAM_LEADER_ASSIGNED template created')
+    } else {
+      console.log('TEAM_LEADER_ASSIGNED template already exists.')
+    }
+
+    // 3f. Team Deleted Template
+    const teamDeletedTemplate = await db.query.emailTemplates.findFirst({
+      where: eq(emailTemplates.code, 'TEAM_DELETED'),
+    })
+
+    if (!teamDeletedTemplate) {
+      console.log('Creating TEAM_DELETED template...')
+      await db.insert(emailTemplates).values({
+        code: 'TEAM_DELETED',
+        name: 'Team Deleted',
+        subject: 'Team {teamName} has been disbanded',
+        body: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background-color: #EF4444; color: white; padding: 20px; text-align: center; }
+    .content { padding: 30px 20px; background: #f9fafb; }
+    .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Team Disbanded</h1>
+    </div>
+    <div class="content">
+      <p>Hello <strong>{fullName}</strong>,</p>
+      <p>The team <strong>{teamName}</strong> has been disbanded.</p>
+      <p>You have been unassigned from this team.</p>
+    </div>
+    <div class="footer">
+      <p>&copy; 2026 Tech House HRM System. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>`,
+        variables: JSON.stringify({
+          fullName: "User's full name",
+          teamName: 'Name of the team',
+        }),
+        isSystem: true,
+      })
+      console.log('✅ TEAM_DELETED template created')
+    } else {
+      console.log('TEAM_DELETED template already exists.')
+    }
+
     console.log('✅ Seed completed successfully')
   } catch (error) {
     console.error('❌ Seed failed:', error)
