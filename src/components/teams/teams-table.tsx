@@ -1,5 +1,12 @@
 import * as React from 'react'
-import { IconEdit, IconTrash, IconSearch, IconFilter } from '@tabler/icons-react'
+import { Link } from '@tanstack/react-router'
+import {
+  IconDots,
+  IconEdit,
+  IconFilter,
+  IconSearch,
+  IconTrash,
+} from '@tabler/icons-react'
 import { format } from 'date-fns'
 import type { TeamWithStats } from '@/lib/team.schemas'
 import { Button } from '@/components/ui/button'
@@ -19,6 +26,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -55,14 +70,6 @@ export function TeamsTable({
     return () => clearTimeout(timer)
   }, [localSearch, onSearchChange])
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-muted-foreground">Loading teams...</div>
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-4">
       {/* Filters */}
@@ -88,15 +95,11 @@ export function TeamsTable({
             }
             onValueChange={(value) =>
               onFilterHasLeaderChange(
-                value === 'all'
-                  ? undefined
-                  : value === 'with-leader'
-                    ? true
-                    : false,
+                value === 'all' ? undefined : value === 'with-leader',
               )
             }
           >
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-45">
               <SelectValue placeholder="Filter by leader" />
             </SelectTrigger>
             <SelectContent>
@@ -121,9 +124,20 @@ export function TeamsTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.length === 0 ? (
+            {isLoading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={5} className="py-8">
+                  <div className="flex justify-center">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent"></div>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : data.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={5}
+                  className="text-center py-8 text-muted-foreground"
+                >
                   No teams found. Create your first team to get started.
                 </TableCell>
               </TableRow>
@@ -132,7 +146,13 @@ export function TeamsTable({
                 <TableRow key={team.id}>
                   <TableCell className="font-medium">
                     <div>
-                      <div>{team.teamName}</div>
+                      <Link
+                        to="/admin/teams/$teamId"
+                        params={{ teamId: team.id.toString() }}
+                        className="hover:underline hover:text-primary"
+                      >
+                        {team.teamName}
+                      </Link>
                       {team.description && (
                         <div className="text-sm text-muted-foreground truncate max-w-xs">
                           {team.description}
@@ -144,7 +164,9 @@ export function TeamsTable({
                     {team.leader ? (
                       <div className="flex items-center gap-2">
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src={team.leader.avatarUrl || undefined} />
+                          <AvatarImage
+                            src={team.leader.avatarUrl || undefined}
+                          />
                           <AvatarFallback>
                             {team.leader.fullName.charAt(0)}
                           </AvatarFallback>
@@ -169,22 +191,29 @@ export function TeamsTable({
                     {format(new Date(team.createdAt), 'MMM dd, yyyy')}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onEdit(team)}
-                      >
-                        <IconEdit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onDelete(team)}
-                      >
-                        <IconTrash className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Open menu</span>
+                          <IconDots className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => onEdit(team)}>
+                          <IconEdit className="mr-2 h-4 w-4" />
+                          Edit Team
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => onDelete(team)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <IconTrash className="mr-2 h-4 w-4" />
+                          Delete Team
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))
@@ -207,7 +236,13 @@ export function TeamsTable({
               <CardHeader>
                 <CardTitle className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div>{team.teamName}</div>
+                    <Link
+                      to="/admin/teams/$teamId"
+                      params={{ teamId: team.id.toString() }}
+                      className="hover:underline hover:text-primary"
+                    >
+                      {team.teamName}
+                    </Link>
                     {team.description && (
                       <p className="text-sm text-muted-foreground font-normal mt-1">
                         {team.description}
@@ -215,26 +250,37 @@ export function TeamsTable({
                     )}
                   </div>
                   <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onEdit(team)}
-                    >
-                      <IconEdit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onDelete(team)}
-                    >
-                      <IconTrash className="h-4 w-4 text-destructive" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="-mr-2">
+                          <span className="sr-only">Open menu</span>
+                          <IconDots className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => onEdit(team)}>
+                          <IconEdit className="mr-2 h-4 w-4" />
+                          Edit Team
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => onDelete(team)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <IconTrash className="mr-2 h-4 w-4" />
+                          Delete Team
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div>
-                  <div className="text-sm text-muted-foreground mb-1">Leader</div>
+                  <div className="text-sm text-muted-foreground mb-1">
+                    Leader
+                  </div>
                   {team.leader ? (
                     <div className="flex items-center gap-2">
                       <Avatar className="h-8 w-8">
@@ -262,7 +308,9 @@ export function TeamsTable({
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Created</span>
-                  <span>{format(new Date(team.createdAt), 'MMM dd, yyyy')}</span>
+                  <span>
+                    {format(new Date(team.createdAt), 'MMM dd, yyyy')}
+                  </span>
                 </div>
               </CardContent>
             </Card>

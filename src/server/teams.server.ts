@@ -793,14 +793,68 @@ export const assignLeaderFn = createServerFn({ method: 'POST' })
         }
       }
 
-      // Update team leader
-      await db
-        .update(teams)
-        .set({
-          leaderId,
-          updatedAt: new Date(),
-        })
-        .where(eq(teams.id, teamId))
+      // Get LEADER role ID
+      const leaderRole = await db.query.roles.findFirst({
+        where: eq(roles.roleName, 'LEADER'),
+      })
+
+      if (!leaderRole) {
+        throw new Error('LEADER role not found in system')
+      }
+
+      // Transaction: Update team leader + user role
+      await db.transaction(async (tx) => {
+        // If there's an old leader, optionally revert their role to DEV
+        // (Only if they're not leading another team)
+        if (team.leaderId && team.leaderId !== leaderId) {
+          const oldLeaderTeamsCount = await tx
+            .select({ count: count() })
+            .from(teams)
+            .where(
+              and(
+                eq(teams.leaderId, team.leaderId),
+                isNull(teams.deletedAt),
+              ),
+            )
+
+          // If old leader is not leading any other team, revert to DEV
+          if (oldLeaderTeamsCount[0].count <= 1) {
+            const devRole = await tx.query.roles.findFirst({
+              where: eq(roles.roleName, 'DEV'),
+            })
+
+            if (devRole) {
+              await tx
+                .update(users)
+                .set({
+                  roleId: devRole.id,
+                  updatedAt: new Date(),
+                })
+                .where(eq(users.id, team.leaderId))
+            }
+          }
+        }
+
+        // Update team leader
+        await tx
+          .update(teams)
+          .set({
+            leaderId,
+            updatedAt: new Date(),
+          })
+          .where(eq(teams.id, teamId))
+
+        // If assigning a new leader, update their role to LEADER
+        if (leaderId !== null) {
+          await tx
+            .update(users)
+            .set({
+              roleId: leaderRole.id,
+              updatedAt: new Date(),
+            })
+            .where(eq(users.id, leaderId))
+        }
+      })
 
       // TODO: Send emails to old and new leader
 
