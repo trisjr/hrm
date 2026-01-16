@@ -30,6 +30,8 @@ import {
   createAssessmentCycleSchema,
 } from '@/lib/competency.schemas'
 import { useEffect } from 'react'
+import { DatePicker } from '@/components/common/date-picker.tsx'
+import { format } from 'date-fns'
 
 interface CreateCycleDialogProps {
   open: boolean
@@ -169,15 +171,12 @@ export function CreateCycleDialog({
                   <FormItem>
                     <FormLabel>Start Date</FormLabel>
                     <FormControl>
-                      <Input
-                        type="date"
-                        value={
-                          field.value instanceof Date
-                            ? field.value.toISOString().split('T')[0]
-                            : field.value
-                        }
-                        onChange={(e) =>
-                          field.onChange(new Date(e.target.value))
+                      <DatePicker
+                        value={field.value ? new Date(field.value) : undefined}
+                        onChange={(date) =>
+                          field.onChange(
+                            date ? format(date, 'yyyy-MM-dd') : undefined,
+                          )
                         }
                       />
                     </FormControl>
@@ -193,15 +192,12 @@ export function CreateCycleDialog({
                   <FormItem>
                     <FormLabel>End Date</FormLabel>
                     <FormControl>
-                      <Input
-                        type="date"
-                        value={
-                          field.value instanceof Date
-                            ? field.value.toISOString().split('T')[0]
-                            : field.value
-                        }
-                        onChange={(e) =>
-                          field.onChange(new Date(e.target.value))
+                      <DatePicker
+                        value={field.value ? new Date(field.value) : undefined}
+                        onChange={(date) =>
+                          field.onChange(
+                            date ? format(date, 'yyyy-MM-dd') : undefined,
+                          )
                         }
                       />
                     </FormControl>

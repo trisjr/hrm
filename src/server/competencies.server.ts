@@ -13,9 +13,12 @@ import {
   updateCompetencySchema,
   deleteCompetencySchema,
   listCompetenciesParamsSchema,
+  createAssessmentCycleSchema,
+  updateAssessmentCycleSchema,
+  listAssessmentCyclesParamsSchema,
 } from '@/lib/competency.schemas'
 import { db } from '@/db'
-import { competencyGroups, competencies, competencyLevels, users } from '@/db/schema'
+import { competencyGroups, competencies, competencyLevels, users, assessmentCycles, userAssessments } from '@/db/schema'
 import { verifyToken } from '@/lib/auth.utils'
 
 // ==================== HELPER FUNCTIONS ====================
@@ -742,12 +745,7 @@ export const bulkSetRequirementsFn = createServerFn({ method: 'POST' }).handler(
 
 // ==================== ASSESSMENT CYCLES FUNCTIONS (Phase 3) ====================
 
-import {
-  createAssessmentCycleSchema,
-  updateAssessmentCycleSchema,
-  listAssessmentCyclesParamsSchema,
-} from '@/lib/competency.schemas'
-import { assessmentCycles } from '@/db/schema'
+
 
 /**
  * Get all assessment cycles with optional filtering
@@ -951,8 +949,16 @@ export const deleteAssessmentCycleFn = createServerFn({
     throw new Error('Assessment cycle not found')
   }
 
-  // TODO: Check if any assessments exist for this cycle
-  // For now, we'll allow deletion
+  // Check if any assessments exist for this cycle
+  const hasAssessments = await db.query.userAssessments.findFirst({
+    where: eq(userAssessments.cycleId, cycleId),
+  })
+
+  if (hasAssessments) {
+    throw new Error(
+      'Cannot delete cycle: Assessments have already been created for this cycle. Please delete the assessments first or archive the cycle.',
+    )
+  }
 
   await db.delete(assessmentCycles).where(eq(assessmentCycles.id, cycleId))
 
