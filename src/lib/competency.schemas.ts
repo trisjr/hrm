@@ -188,3 +188,42 @@ export type SetCompetencyRequirementInput = z.infer<
   typeof setCompetencyRequirementSchema
 >
 export type BulkSetRequirementsInput = z.infer<typeof bulkSetRequirementsSchema>
+
+// ============================================================================
+// ASSESSMENT CYCLES SCHEMAS (Phase 3)
+// ============================================================================
+
+export const createAssessmentCycleSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, 'Cycle name is required')
+    .max(200, 'Cycle name must be less than 200 characters'),
+  startDate: z.coerce.date(),
+  endDate: z.coerce.date(),
+})
+
+export const updateAssessmentCycleSchema = z.object({
+  cycleId: z.number().int().positive(),
+  data: z.object({
+    name: z.string().trim().min(1).max(200).optional(),
+    startDate: z.coerce.date().optional(),
+    endDate: z.coerce.date().optional(),
+    status: z.enum(['DRAFT', 'ACTIVE', 'COMPLETED']).optional(),
+  }),
+})
+
+export const listAssessmentCyclesParamsSchema = z.object({
+  status: z.enum(['DRAFT', 'ACTIVE', 'COMPLETED']).optional(),
+  year: z.number().int().min(2020).max(2100).optional(),
+})
+
+export type CreateAssessmentCycleInput = z.infer<
+  typeof createAssessmentCycleSchema
+>
+export type UpdateAssessmentCycleInput = z.infer<
+  typeof updateAssessmentCycleSchema
+>
+export type ListAssessmentCyclesParams = z.infer<
+  typeof listAssessmentCyclesParamsSchema
+>

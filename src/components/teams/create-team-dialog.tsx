@@ -79,7 +79,9 @@ export function CreateTeamDialog({
               name="teamName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Team Name *</FormLabel>
+                  <FormLabel>
+                    Team Name<span className="text-destructive">*</span>
+                  </FormLabel>
                   <FormControl>
                     <Input
                       placeholder="e.g., Engineering Team, Sales Team"

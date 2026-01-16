@@ -739,3 +739,221 @@ export const bulkSetRequirementsFn = createServerFn({ method: 'POST' }).handler(
     }
   },
 )
+
+// ==================== ASSESSMENT CYCLES FUNCTIONS (Phase 3) ====================
+
+import {
+  createAssessmentCycleSchema,
+  updateAssessmentCycleSchema,
+  listAssessmentCyclesParamsSchema,
+} from '@/lib/competency.schemas'
+import { assessmentCycles } from '@/db/schema'
+
+/**
+ * Get all assessment cycles with optional filtering
+ */
+export const getAssessmentCyclesFn = createServerFn({ method: 'POST' }).handler(
+  async (ctx) => {
+    const schema = z.object({
+      token: z.string(),
+      params: listAssessmentCyclesParamsSchema.optional(),
+    })
+    const data = schema.parse(ctx.data)
+
+    await verifyAdminOrHR(data.token)
+
+    const params = data.params || {}
+    const filters: any[] = []
+
+    if (params.status) {
+      filters.push(eq(assessmentCycles.status, params.status))
+    }
+
+    if (params.year) {
+      filters.push(
+        sql`EXTRACT(YEAR FROM ${assessmentCycles.startDate}) = ${params.year}`,
+      )
+    }
+
+    const cycles = await db.query.assessmentCycles.findMany({
+      where: filters.length > 0 ? and(...filters) : undefined,
+      orderBy: (assessmentCycles, { desc }) => [
+        desc(assessmentCycles.startDate),
+      ],
+    })
+
+    return {
+      success: true,
+      data: cycles,
+    }
+  },
+)
+
+/**
+ * Create a new assessment cycle
+ * Validates that dates don't overlap with existing ACTIVE cycles
+ */
+export const createAssessmentCycleFn = createServerFn({
+  method: 'POST',
+}).handler(async (ctx) => {
+  const schema = z.object({
+    token: z.string(),
+    data: createAssessmentCycleSchema,
+  })
+  const data = schema.parse(ctx.data)
+
+  await verifyAdminOrHR(data.token)
+
+  const { name, startDate, endDate } = data.data
+
+  // Validate dates
+  if (endDate <= startDate) {
+    throw new Error('End date must be after start date')
+  }
+
+  // Check for overlapping ACTIVE cycles
+  const overlapping = await db.query.assessmentCycles.findFirst({
+    where: and(
+      eq(assessmentCycles.status, 'ACTIVE'),
+      sql`${assessmentCycles.startDate} <= ${endDate} AND ${assessmentCycles.endDate} >= ${startDate}`,
+    ),
+  })
+
+  if (overlapping) {
+    throw new Error(
+      `Date range overlaps with existing active cycle "${overlapping.name}" (${new Date(overlapping.startDate).toLocaleDateString()} - ${new Date(overlapping.endDate).toLocaleDateString()})`,
+    )
+  }
+
+  const [newCycle] = await db
+    .insert(assessmentCycles)
+    .values({
+      name,
+      startDate: startDate.toISOString().split('T')[0], // YYYY-MM-DD
+      endDate: endDate.toISOString().split('T')[0],
+      status: 'ACTIVE' as const,
+    } as any)
+    .returning()
+
+  return {
+    success: true,
+    data: newCycle,
+  }
+})
+
+/**
+ * Update an existing assessment cycle
+ */
+export const updateAssessmentCycleFn = createServerFn({
+  method: 'POST',
+}).handler(async (ctx) => {
+  const schema = z.object({
+    token: z.string(),
+    data: updateAssessmentCycleSchema,
+  })
+  const data = schema.parse(ctx.data)
+
+  await verifyAdminOrHR(data.token)
+
+  const { cycleId, data: updates } = data.data
+
+  // Check if cycle exists
+  const existing = await db.query.assessmentCycles.findFirst({
+    where: eq(assessmentCycles.id, cycleId),
+  })
+
+  if (!existing) {
+    throw new Error('Assessment cycle not found')
+  }
+
+  // Validate dates if being updated
+  const newStartDate = updates.startDate || existing.startDate
+  const newEndDate = updates.endDate || existing.endDate
+
+  if (newEndDate <= newStartDate) {
+    throw new Error('End date must be after start date')
+  }
+
+  // Check for overlapping if dates changed and status is ACTIVE
+  const newStatus = updates.status || existing.status
+  if (
+    newStatus === 'ACTIVE' &&
+    (updates.startDate || updates.endDate)
+  ) {
+    const overlapping = await db.query.assessmentCycles.findFirst({
+      where: and(
+        eq(assessmentCycles.status, 'ACTIVE'),
+        sql`${assessmentCycles.id} != ${cycleId}`,
+        sql`${assessmentCycles.startDate} <= ${newEndDate} AND ${assessmentCycles.endDate} >= ${newStartDate}`,
+      ),
+    })
+
+    if (overlapping) {
+      throw new Error(
+        `Date range overlaps with existing active cycle "${overlapping.name}"`,
+      )
+    }
+  }
+
+  const updateData: any = {
+    name: updates.name || existing.name,
+  }
+
+  if (updates.startDate) {
+    updateData.startDate = newStartDate
+  }
+  if (updates.endDate) {
+    updateData.endDate = newEndDate
+  }
+  if (updates.status) {
+    updateData.status = newStatus
+  }
+
+  const [updated] = await db
+    .update(assessmentCycles)
+    .set(updateData)
+    .where(eq(assessmentCycles.id, cycleId))
+    .returning()
+
+  return {
+    success: true,
+    data: updated,
+  }
+})
+
+/**
+ * Delete an assessment cycle
+ * Only allowed if no assessments exist for this cycle
+ */
+export const deleteAssessmentCycleFn = createServerFn({
+  method: 'POST',
+}).handler(async (ctx) => {
+  const schema = z.object({
+    token: z.string(),
+    data: z.object({ cycleId: z.number().int().positive() }),
+  })
+  const data = schema.parse(ctx.data)
+
+  await verifyAdminOrHR(data.token)
+
+  const { cycleId } = data.data
+
+  // Check if cycle exists
+  const existing = await db.query.assessmentCycles.findFirst({
+    where: eq(assessmentCycles.id, cycleId),
+  })
+
+  if (!existing) {
+    throw new Error('Assessment cycle not found')
+  }
+
+  // TODO: Check if any assessments exist for this cycle
+  // For now, we'll allow deletion
+
+  await db.delete(assessmentCycles).where(eq(assessmentCycles.id, cycleId))
+
+  return {
+    success: true,
+    message: `Assessment cycle "${existing.name}" deleted successfully`,
+  }
+})

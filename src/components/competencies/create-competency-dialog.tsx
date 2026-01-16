@@ -14,11 +14,11 @@ import { Button } from '@/components/ui/button'
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -45,11 +45,31 @@ interface CreateCompetencyDialogProps {
 }
 
 const LEVEL_LABELS = [
-  { number: 1, label: 'Beginner', description: 'Understands basic concepts, needs guidance' },
-  { number: 2, label: 'Developing', description: 'Can perform with supervision' },
-  { number: 3, label: 'Competent', description: 'Works independently, handles standard cases' },
-  { number: 4, label: 'Advanced', description: 'Handles complex cases, mentors others' },
-  { number: 5, label: 'Expert', description: 'Innovates, defines best practices, thought leader' },
+  {
+    number: 1,
+    label: 'Beginner',
+    description: 'Understands basic concepts, needs guidance',
+  },
+  {
+    number: 2,
+    label: 'Developing',
+    description: 'Can perform with supervision',
+  },
+  {
+    number: 3,
+    label: 'Competent',
+    description: 'Works independently, handles standard cases',
+  },
+  {
+    number: 4,
+    label: 'Advanced',
+    description: 'Handles complex cases, mentors others',
+  },
+  {
+    number: 5,
+    label: 'Expert',
+    description: 'Innovates, defines best practices, thought leader',
+  },
 ]
 
 export function CreateCompetencyDialog({
@@ -97,7 +117,10 @@ export function CreateCompetencyDialog({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+          <form
+            onSubmit={form.handleSubmit(handleSubmit)}
+            className="space-y-4"
+          >
             <div className="space-y-4">
               {/* Group Selection */}
               <FormField
@@ -105,7 +128,10 @@ export function CreateCompetencyDialog({
                 name="groupId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Competency Group *</FormLabel>
+                    <FormLabel>
+                      Competency Group
+                      <span className="text-destructive">*</span>
+                    </FormLabel>
                     <Select
                       onValueChange={(value) => field.onChange(Number(value))}
                       value={field.value?.toString()}
@@ -118,7 +144,10 @@ export function CreateCompetencyDialog({
                       </FormControl>
                       <SelectContent>
                         {groups.map((group) => (
-                          <SelectItem key={group.id} value={group.id.toString()}>
+                          <SelectItem
+                            key={group.id}
+                            value={group.id.toString()}
+                          >
                             {group.name}
                           </SelectItem>
                         ))}
@@ -135,7 +164,9 @@ export function CreateCompetencyDialog({
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Competency Name *</FormLabel>
+                    <FormLabel>
+                      Competency Name<span className="text-destructive">*</span>
+                    </FormLabel>
                     <FormControl>
                       <Input
                         placeholder="e.g., Problem Solving, ReactJS, Leadership"
@@ -171,7 +202,10 @@ export function CreateCompetencyDialog({
               {/* Behavioral Levels */}
               <div className="space-y-3 rounded-lg border p-4">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-medium">Behavioral Indicators *</h4>
+                  <h4 className="text-sm font-medium">
+                    Behavioral Indicators
+                    <span className="text-destructive ml-2">*</span>
+                  </h4>
                   <Badge variant="outline">5 Levels Required</Badge>
                 </div>
                 <FormDescription>
@@ -188,7 +222,9 @@ export function CreateCompetencyDialog({
                         <FormItem>
                           <FormLabel className="flex items-center gap-2">
                             <Badge
-                              variant={levelInfo.number >= 4 ? 'default' : 'secondary'}
+                              variant={
+                                levelInfo.number >= 4 ? 'default' : 'secondary'
+                              }
                               className="font-mono"
                             >
                               Level {levelInfo.number}

@@ -125,6 +125,10 @@ function RouteComponent() {
     await navigate({ to: '/admin/competencies/requirements' })
   }
 
+  const openAssessmentCycles = async () => {
+    await navigate({ to: '/admin/competencies/cycles' })
+  }
+
   return (
     <div className="space-y-6">
       {/* Breadcrumb Navigation */}
@@ -168,6 +172,13 @@ function RouteComponent() {
             onClick={openMatrix}
           >
             Requirements Matrix
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full sm:w-auto"
+            onClick={openAssessmentCycles}
+          >
+            Assessment Cycles
           </Button>
           <Button
             className="w-full sm:w-auto"

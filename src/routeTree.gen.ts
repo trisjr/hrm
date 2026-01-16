@@ -25,6 +25,7 @@ import { Route as AdminCompetenciesIndexRouteImport } from './routes/admin/compe
 import { Route as AdminTeamsAnalyticsRouteImport } from './routes/admin/teams/analytics'
 import { Route as AdminTeamsTeamIdRouteImport } from './routes/admin/teams/$teamId'
 import { Route as AdminCompetenciesRequirementsIndexRouteImport } from './routes/admin/competencies/requirements/index'
+import { Route as AdminCompetenciesCyclesIndexRouteImport } from './routes/admin/competencies/cycles/index'
 
 const VerifyRoute = VerifyRouteImport.update({
   id: '/verify',
@@ -109,6 +110,12 @@ const AdminCompetenciesRequirementsIndexRoute =
     path: '/admin/competencies/requirements/',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AdminCompetenciesCyclesIndexRoute =
+  AdminCompetenciesCyclesIndexRouteImport.update({
+    id: '/admin/competencies/cycles/',
+    path: '/admin/competencies/cycles/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -126,6 +133,7 @@ export interface FileRoutesByFullPath {
   '/admin/requests': typeof AdminRequestsIndexRoute
   '/admin/teams': typeof AdminTeamsIndexRoute
   '/admin/users': typeof AdminUsersIndexRoute
+  '/admin/competencies/cycles': typeof AdminCompetenciesCyclesIndexRoute
   '/admin/competencies/requirements': typeof AdminCompetenciesRequirementsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -144,6 +152,7 @@ export interface FileRoutesByTo {
   '/admin/requests': typeof AdminRequestsIndexRoute
   '/admin/teams': typeof AdminTeamsIndexRoute
   '/admin/users': typeof AdminUsersIndexRoute
+  '/admin/competencies/cycles': typeof AdminCompetenciesCyclesIndexRoute
   '/admin/competencies/requirements': typeof AdminCompetenciesRequirementsIndexRoute
 }
 export interface FileRoutesById {
@@ -163,6 +172,7 @@ export interface FileRoutesById {
   '/admin/requests/': typeof AdminRequestsIndexRoute
   '/admin/teams/': typeof AdminTeamsIndexRoute
   '/admin/users/': typeof AdminUsersIndexRoute
+  '/admin/competencies/cycles/': typeof AdminCompetenciesCyclesIndexRoute
   '/admin/competencies/requirements/': typeof AdminCompetenciesRequirementsIndexRoute
 }
 export interface FileRouteTypes {
@@ -183,6 +193,7 @@ export interface FileRouteTypes {
     | '/admin/requests'
     | '/admin/teams'
     | '/admin/users'
+    | '/admin/competencies/cycles'
     | '/admin/competencies/requirements'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -201,6 +212,7 @@ export interface FileRouteTypes {
     | '/admin/requests'
     | '/admin/teams'
     | '/admin/users'
+    | '/admin/competencies/cycles'
     | '/admin/competencies/requirements'
   id:
     | '__root__'
@@ -219,6 +231,7 @@ export interface FileRouteTypes {
     | '/admin/requests/'
     | '/admin/teams/'
     | '/admin/users/'
+    | '/admin/competencies/cycles/'
     | '/admin/competencies/requirements/'
   fileRoutesById: FileRoutesById
 }
@@ -238,6 +251,7 @@ export interface RootRouteChildren {
   AdminRequestsIndexRoute: typeof AdminRequestsIndexRoute
   AdminTeamsIndexRoute: typeof AdminTeamsIndexRoute
   AdminUsersIndexRoute: typeof AdminUsersIndexRoute
+  AdminCompetenciesCyclesIndexRoute: typeof AdminCompetenciesCyclesIndexRoute
   AdminCompetenciesRequirementsIndexRoute: typeof AdminCompetenciesRequirementsIndexRoute
 }
 
@@ -355,6 +369,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCompetenciesRequirementsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/competencies/cycles/': {
+      id: '/admin/competencies/cycles/'
+      path: '/admin/competencies/cycles'
+      fullPath: '/admin/competencies/cycles'
+      preLoaderRoute: typeof AdminCompetenciesCyclesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -374,6 +395,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRequestsIndexRoute: AdminRequestsIndexRoute,
   AdminTeamsIndexRoute: AdminTeamsIndexRoute,
   AdminUsersIndexRoute: AdminUsersIndexRoute,
+  AdminCompetenciesCyclesIndexRoute: AdminCompetenciesCyclesIndexRoute,
   AdminCompetenciesRequirementsIndexRoute:
     AdminCompetenciesRequirementsIndexRoute,
 }
