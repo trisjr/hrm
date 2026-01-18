@@ -6,7 +6,7 @@ import { getActiveAssessmentCycleFn } from '@/server/competencies.server'
 import { AssessmentDetail } from '@/components/competencies/assessments/assessment-detail'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { IconAlertCircle, IconArrowLeft, IconPlayerPlay } from '@tabler/icons-react'
+import { IconAlertCircle, IconArrowLeft, IconPlayerPlay, IconCheck } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 
@@ -118,14 +118,23 @@ function RouteComponent() {
     // No active cycle and no assessment
     return (
       <div className="container mx-auto py-20 max-w-2xl text-center">
-        <div className="bg-muted/30 p-10 rounded-xl border border-dashed">
-            <h2 className="text-2xl font-bold mb-2">No Active Assessment</h2>
-            <p className="text-muted-foreground mb-6">
-                There are no active assessment cycles available for you at this time.
+        <div className="bg-muted/30 p-10 rounded-xl border border-dashed flex flex-col items-center">
+            <div className="bg-green-100 dark:bg-green-900/30 w-16 h-16 rounded-full flex items-center justify-center mb-6">
+                <IconCheck className="w-8 h-8 text-green-600 dark:text-green-400" />
+            </div>
+            <h2 className="text-2xl font-bold mb-2">You're All Caught Up!</h2>
+            <p className="text-muted-foreground mb-6 max-w-md">
+                You have completed all pending assessments. 
+                You can review your past performance results in Assessment History.
             </p>
-            <Button variant="outline" asChild>
-                <Link to="/">Go Home</Link>
-            </Button>
+            <div className="flex gap-4">
+                <Button variant="outline" asChild>
+                    <Link to="/">Dashboard</Link>
+                </Button>
+                <Button asChild>
+                    <Link to="/competencies/assessments">View History</Link>
+                </Button>
+            </div>
         </div>
       </div>
     )

@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
-import { and, desc, eq, isNull } from 'drizzle-orm'
+import { and, desc, eq, isNull, inArray } from 'drizzle-orm'
 import { z } from 'zod'
 import {
   createIDPSchema,
@@ -147,7 +147,7 @@ export const getMyActiveIDPFn = createServerFn({ method: 'POST' }).handler(
       ),
       orderBy: [desc(individualDevelopmentPlans.createdAt)],
       with: {
-        assessment: {
+        userAssessment: {
           with: { cycle: true },
         },
       },
@@ -227,4 +227,104 @@ export const updateActivityStatusFn = createServerFn({
     .where(eq(idpActivities.id, data.activityId))
 
   return { success: true, message: 'Activity updated' }
+})
+
+/**
+ * Get Team IDPs for Leader
+ * Returns list of IDPs for all members in the leader's team
+ */
+export const getTeamIDPsFn = createServerFn({
+  method: 'POST',
+}).handler(async (ctx) => {
+  const schema = z.object({ token: z.string() })
+  const { token } = schema.parse(ctx.data)
+  const user = await verifyUser(token)
+
+  // Verify Leader Role
+  const userRole = await db.query.users.findFirst({
+        where: eq(users.id, user.id),
+        with: { role: true, leadingTeam: { with: { members: true } } }
+  })
+
+  // Although we verifyUser above, we need detailed role/team info here
+  if (!userRole?.leadingTeam) {
+      // Return empty if not leading any team (or not leader)
+      return { success: true, data: [] }
+  }
+
+  const memberIds = userRole.leadingTeam.members.map(m => m.id)
+  
+  if (memberIds.length === 0) {
+      return { success: true, data: [] }
+  }
+
+  // Fetch IDPs of members
+  const teamIDPs = await db.query.individualDevelopmentPlans.findMany({
+      where: inArray(individualDevelopmentPlans.userId, memberIds),
+      with: {
+          user: {
+              with: { profile: true }
+          },
+          userAssessment: {
+              with: { cycle: true }
+          },
+          activities: true 
+      },
+      orderBy: [desc(individualDevelopmentPlans.createdAt)]
+  })
+  
+  return {
+    success: true,
+    data: teamIDPs
+  }
+})
+
+/**
+ * Get IDP By ID
+ * Allowed for Owner or Leader
+ */
+export const getIDPByIdFn = createServerFn({
+  method: 'POST',
+}).handler(async (ctx) => {
+  const schema = z.object({
+    token: z.string(),
+    data: z.object({ idpId: z.number() }),
+  })
+  const { token, data } = schema.parse(ctx.data)
+  const user = await verifyUser(token)
+
+  const idp = await db.query.individualDevelopmentPlans.findFirst({
+    where: eq(individualDevelopmentPlans.id, data.idpId),
+    with: {
+        user: { with: { profile: true } },
+        activities: { with: { competency: true } },
+        userAssessment: { with: { cycle: true } }
+    }
+  })
+
+  if (!idp) {
+      throw new Error('IDP not found')
+  }
+
+  // Access Control
+  if (idp.userId !== user.id) {
+    // Check if requester is Leader of IDP Owner
+    const requester = await db.query.users.findFirst({
+        where: eq(users.id, user.id),
+        with: { 
+            leadingTeam: { with: { members: true } },
+            role: true
+        }
+    })
+    
+    // Check if IDP owner is in requester's team members
+    const isLeader = requester?.leadingTeam?.members.some(m => m.id === idp.userId)
+    
+    // Explicit Admin/HR check can be added here too if needed
+    if (!isLeader && requester?.role?.roleName !== 'ADMIN' && requester?.role?.roleName !== 'HR') {
+         throw new Error('Unauthorized access to this IDP')
+    }
+  }
+
+  return { success: true, data: idp }
 })

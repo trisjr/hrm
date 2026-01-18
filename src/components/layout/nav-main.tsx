@@ -12,6 +12,7 @@ import {
   IconUserEdit,
   IconUsers,
   IconUsersGroup,
+  IconNotes,
 } from '@tabler/icons-react'
 import { useLocation, useNavigate } from '@tanstack/react-router'
 import {
@@ -84,6 +85,18 @@ const ALL_MENU_ITEMS: Array<MenuItem> = [
     url: '/admin/competencies/analytics',
     icon: IconChartBar,
     roles: ['ADMIN', 'HR'],
+  },
+  {
+    title: 'Team Competency Analytics', // This is the existing item for LEADER
+    url: '/team/competencies/analytics',
+    icon: IconChartBar,
+    roles: ['LEADER'],
+  },
+  {
+    title: 'Dev Plans (IDP)',
+    url: '/team/idp',
+    icon: IconNotes,
+    roles: ['LEADER'],
   },
 
   // LEADER and above: Team management

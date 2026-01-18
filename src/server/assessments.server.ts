@@ -3,7 +3,7 @@
  * Handle individual competency assessments workflow
  */
 import { createServerFn } from '@tanstack/react-start'
-import { and, eq, inArray, isNull } from 'drizzle-orm'
+import { and, eq, inArray, isNull, desc, ne } from 'drizzle-orm'
 import { z } from 'zod'
 import {
   createUserAssessmentSchema,
@@ -203,6 +203,9 @@ export const getMyAssessmentFn = createServerFn({ method: 'POST' }).handler(
     const filters: any[] = [eq(userAssessments.userId, user.id)]
     if (data.params?.cycleId) {
       filters.push(eq(userAssessments.cycleId, data.params.cycleId))
+    } else {
+      // If NOT specific cycle, prioritize INCOMPLETE assessments
+      filters.push(ne(userAssessments.status, 'DONE'))
     }
 
     const assessment = await db.query.userAssessments.findFirst({
@@ -415,12 +418,62 @@ export const submitSelfAssessmentFn = createServerFn({
     })
     .where(eq(userAssessments.id, assessmentId))
 
-  // TODO: Notify leader
+  // Notify Leader
+  const requesterFull = await db.query.users.findFirst({
+        where: eq(users.id, user.id),
+        with: { 
+            team: {
+                with: { leader: { with: { profile: true } } }
+            },
+            profile: true
+        }
+  })
+  
+  const leader = requesterFull?.team?.leader
+  if (leader && leader.email) {
+       const subject = `Assessment Submitted: ${requesterFull.profile?.fullName || 'Employee'}`
+       const body = `<p>Dear ${leader.profile?.fullName || 'Leader'},</p>
+       <p>${requesterFull.profile?.fullName} has completed their self-assessment.</p>
+       <p>Please log in to the system to provide your assessment.</p>
+       <p><a href="${process.env.APP_URL}/team/assessments">Go to Team Assessments</a></p>`
+       
+       await sendEmail(leader.email, subject, body)
+  }
 
   return {
     success: true,
     message: 'Self-assessment submitted successfully',
   }
+})
+
+/**
+ * Get all assessments history for current user
+ */
+export const getMyAssessmentsHistoryFn = createServerFn({
+  method: 'POST',
+}).handler(async (ctx) => {
+  const schema = z.object({ token: z.string() })
+  const { token } = schema.parse(ctx.data)
+  const user = await verifyUser(token)
+
+  console.log('--- getMyAssessmentsHistoryFn Debug ---')
+  console.log('User ID:', user.id, 'Email:', user.email)
+
+  const assessments = await db.query.userAssessments.findMany({
+    where: eq(userAssessments.userId, user.id),
+    with: {
+        cycle: true
+    },
+    orderBy: [desc(userAssessments.createdAt)]
+  })
+
+  console.log('Assessments Found:', assessments.length)
+  if (assessments.length > 0) {
+      console.log('First Assessment Status:', assessments[0].status)
+  }
+  console.log('---------------------------------------')
+
+  return { success: true, data: assessments }
 })
 
 /**
