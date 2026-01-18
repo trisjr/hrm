@@ -3,7 +3,7 @@
  * Handle individual competency assessments workflow
  */
 import { createServerFn } from '@tanstack/react-start'
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, eq, inArray, isNull } from 'drizzle-orm'
 import { z } from 'zod'
 import {
   createUserAssessmentSchema,
@@ -1300,5 +1300,432 @@ export const getGapAnalysisReportFn = createServerFn({
       byCompetency: byCompetency.sort((a, b) => a.avgGap - b.avgGap),
       byEmployee: byEmployee.sort((a, b) => a.avgGap - b.avgGap),
     },
+  }
+})
+
+// ==================== TEAM ANALYTICS (FOR LEADERS) ====================
+
+/**
+ * Get Team Radar Data (For Leaders)
+ * Leaders can view aggregated competency radar data for their team members
+ */
+export const getTeamRadarDataFn = createServerFn({
+  method: 'POST',
+}).handler(async (ctx) => {
+  const schema = z.object({
+    token: z.string(),
+  })
+  const { token } = schema.parse(ctx.data)
+
+  // Verify user and get their team
+  const payload = verifyToken(token)
+  if (!payload) {
+    throw new Error('Invalid or expired token')
+  }
+
+  const user = await db.query.users.findFirst({
+    where: and(eq(users.id, payload.id), isNull(users.deletedAt)),
+    with: {
+      role: true,
+      leadingTeam: {
+        with: {
+          members: {
+            where: isNull(users.deletedAt),
+          },
+        },
+      },
+    },
+  })
+
+  if (!user || !user.role) {
+    throw new Error('User not found or has no role')
+  }
+
+  // Check if user is a Leader
+  if (user.role.roleName !== 'LEADER') {
+    throw new Error('Only Leaders can access team analytics')
+  }
+
+  if (!user.leadingTeam) {
+    throw new Error('You are not assigned as a team leader')
+  }
+
+  // Get team member IDs
+  const teamMemberIds = user.leadingTeam.members.map((m) => m.id)
+
+  if (teamMemberIds.length === 0) {
+    return {
+      success: true,
+      data: { groups: [] },
+    }
+  }
+
+  // Get all completed assessments for team members
+  const assessments = await db.query.userAssessments.findMany({
+    where: and(
+      inArray(userAssessments.userId, teamMemberIds),
+      eq(userAssessments.status, 'DONE'),
+    ),
+  })
+
+  if (assessments.length === 0) {
+    return {
+      success: true,
+      data: { groups: [] },
+    }
+  }
+
+  const assessmentIds = assessments.map((a) => a.id)
+
+  // Get all assessment details with competency and group info
+  const details = await db
+    .select({
+      competencyId: userAssessmentDetails.competencyId,
+      finalScore: userAssessmentDetails.finalScore,
+      competency: competencies,
+      group: competencyGroups,
+      requiredLevel: competencyRequirements.requiredLevel,
+    })
+    .from(userAssessmentDetails)
+    .innerJoin(
+      competencies,
+      eq(userAssessmentDetails.competencyId, competencies.id),
+    )
+    .innerJoin(competencyGroups, eq(competencies.groupId, competencyGroups.id))
+    .leftJoin(
+      competencyRequirements,
+      eq(competencyRequirements.competencyId, competencies.id),
+    )
+    .where(inArray(userAssessmentDetails.userAssessmentId, assessmentIds))
+
+  // Group by competency group
+  const groupedData: Record<
+    number,
+    {
+      name: string
+      totalFinalScore: number
+      totalRequiredLevel: number
+      count: number
+      competencies: string[]
+    }
+  > = {}
+
+  for (const detail of details) {
+    if (!detail.group || detail.finalScore === null) continue
+
+    if (!groupedData[detail.group.id]) {
+      groupedData[detail.group.id] = {
+        name: detail.group.name,
+        totalFinalScore: 0,
+        totalRequiredLevel: 0,
+        count: 0,
+        competencies: [],
+      }
+    }
+
+    groupedData[detail.group.id].totalFinalScore += detail.finalScore
+    groupedData[detail.group.id].totalRequiredLevel +=
+      detail.requiredLevel || 0
+    groupedData[detail.group.id].count++
+    if (
+      detail.competency &&
+      !groupedData[detail.group.id].competencies.includes(
+        detail.competency.name,
+      )
+    ) {
+      groupedData[detail.group.id].competencies.push(detail.competency.name)
+    }
+  }
+
+  // Calculate averages
+  const groups = Object.values(groupedData).map((group: any) => ({
+    name: group.name,
+    avgFinalScore: group.count > 0 ? group.totalFinalScore / group.count : 0,
+    avgRequiredLevel:
+      group.count > 0 ? group.totalRequiredLevel / group.count : 0,
+    competencies: group.competencies,
+  }))
+
+  return {
+    success: true,
+    data: { groups },
+  }
+})
+
+/**
+ * Get Team Gap Analysis Report (For Leaders)
+ * Leaders can view detailed gap analysis for their team members
+ */
+export const getTeamGapAnalysisFn = createServerFn({
+  method: 'POST',
+}).handler(async (ctx) => {
+  const schema = z.object({
+    token: z.string(),
+  })
+  const { token } = schema.parse(ctx.data)
+
+  // Verify user and get their team
+  const payload = verifyToken(token)
+  if (!payload) {
+    throw new Error('Invalid or expired token')
+  }
+
+  const user = await db.query.users.findFirst({
+    where: and(eq(users.id, payload.id), isNull(users.deletedAt)),
+    with: {
+      role: true,
+      leadingTeam: {
+        with: {
+          members: {
+            where: isNull(users.deletedAt),
+            with: {
+              profile: true,
+            },
+          },
+        },
+      },
+    },
+  })
+
+  if (!user || !user.role) {
+    throw new Error('User not found or has no role')
+  }
+
+  // Check if user is a Leader
+  if (user.role.roleName !== 'LEADER') {
+    throw new Error('Only Leaders can access team analytics')
+  }
+
+  if (!user.leadingTeam) {
+    throw new Error('You are not assigned as a team leader')
+  }
+
+  // Get team member IDs
+  const teamMemberIds = user.leadingTeam.members.map((m) => m.id)
+
+  if (teamMemberIds.length === 0) {
+    return {
+      success: true,
+      data: {
+        summary: {
+          totalEmployees: 0,
+          avgGap: 0,
+          meetsRequirementPercent: 0,
+          needsDevelopmentPercent: 0,
+        },
+        byCompetency: [],
+        byEmployee: [],
+      },
+    }
+  }
+
+  // Get all completed assessments for team members
+  const assessments = await db.query.userAssessments.findMany({
+    where: and(
+      inArray(userAssessments.userId, teamMemberIds),
+      eq(userAssessments.status, 'DONE'),
+    ),
+    with: {
+      user: {
+        with: {
+          profile: true,
+        },
+      },
+    },
+  })
+
+  if (assessments.length === 0) {
+    return {
+      success: true,
+      data: {
+        summary: {
+          totalEmployees: 0,
+          avgGap: 0,
+          meetsRequirementPercent: 0,
+          needsDevelopmentPercent: 0,
+        },
+        byCompetency: [],
+        byEmployee: [],
+      },
+    }
+  }
+
+  const assessmentIds = assessments.map((a) => a.id)
+
+  // Get all assessment details
+  const allDetails = await db
+    .select({
+      userAssessmentId: userAssessmentDetails.userAssessmentId,
+      competencyId: userAssessmentDetails.competencyId,
+      finalScore: userAssessmentDetails.finalScore,
+      competency: competencies,
+      requiredLevel: competencyRequirements.requiredLevel,
+    })
+    .from(userAssessmentDetails)
+    .innerJoin(
+      competencies,
+      eq(userAssessmentDetails.competencyId, competencies.id),
+    )
+    .leftJoin(
+      competencyRequirements,
+      eq(competencyRequirements.competencyId, competencies.id),
+    )
+    .where(inArray(userAssessmentDetails.userAssessmentId, assessmentIds))
+
+  // Calculate summary statistics
+  const gaps = allDetails
+    .filter((d) => d.finalScore !== null && d.requiredLevel !== null)
+    .map((d) => d.finalScore! - d.requiredLevel!)
+
+  const avgGap = gaps.length > 0 ? gaps.reduce((a, b) => a + b, 0) / gaps.length : 0
+  const meetsRequirement = gaps.filter((g) => g >= 0).length
+  const meetsRequirementPercent =
+    gaps.length > 0 ? (meetsRequirement / gaps.length) * 100 : 0
+  const needsDevelopmentPercent = 100 - meetsRequirementPercent
+
+  // By Competency breakdown
+  const competencyMap: Record<
+    number,
+    {
+      competency: any
+      totalGap: number
+      count: number
+      employeesBelowRequirement: number
+    }
+  > = {}
+
+  for (const detail of allDetails) {
+    if (detail.finalScore === null || detail.requiredLevel === null) continue
+
+    const gap = detail.finalScore - detail.requiredLevel
+
+    if (!competencyMap[detail.competencyId]) {
+      competencyMap[detail.competencyId] = {
+        competency: detail.competency,
+        totalGap: 0,
+        count: 0,
+        employeesBelowRequirement: 0,
+      }
+    }
+
+    competencyMap[detail.competencyId].totalGap += gap
+    competencyMap[detail.competencyId].count++
+    if (gap < 0) {
+      competencyMap[detail.competencyId].employeesBelowRequirement++
+    }
+  }
+
+  const byCompetency = Object.values(competencyMap).map((item) => ({
+    competency: item.competency,
+    avgGap: item.count > 0 ? item.totalGap / item.count : 0,
+    employeesBelowRequirement: item.employeesBelowRequirement,
+  }))
+
+  // By Employee breakdown
+  const byEmployee = assessments.map((assessment) => {
+    const employeeGaps = allDetails
+      .filter(
+        (d) =>
+          d.userAssessmentId === assessment.id &&
+          d.finalScore !== null &&
+          d.requiredLevel !== null,
+      )
+      .map((d) => ({
+        competency: d.competency,
+        gap: d.finalScore! - d.requiredLevel!,
+      }))
+
+    const criticalGaps = employeeGaps
+      .filter((g) => g.gap < -1)
+      .map((g) => g.competency.name)
+
+    const avgEmployeeGap =
+      employeeGaps.length > 0
+        ? employeeGaps.reduce((a, b) => a + b.gap, 0) / employeeGaps.length
+        : 0
+
+    return {
+      user: assessment.user,
+      avgGap: avgEmployeeGap,
+      criticalGaps,
+      totalCompetencies: employeeGaps.length,
+    }
+  })
+
+  return {
+    success: true,
+    data: {
+      summary: {
+        totalEmployees: assessments.length,
+        avgGap: Number(avgGap.toFixed(2)),
+        meetsRequirementPercent: Number(meetsRequirementPercent.toFixed(1)),
+        needsDevelopmentPercent: Number(needsDevelopmentPercent.toFixed(1)),
+      },
+      byCompetency: byCompetency.sort((a, b) => a.avgGap - b.avgGap),
+      byEmployee: byEmployee.sort((a, b) => a.avgGap - b.avgGap),
+    },
+  }
+})
+
+/**
+ * Get Team Assessments (For Leaders)
+ * List all assessments of members in the leader's team
+ */
+export const getTeamAssessmentsFn = createServerFn({
+  method: 'POST',
+}).handler(async (ctx) => {
+  const schema = z.object({
+    token: z.string(),
+  })
+  const { token } = schema.parse(ctx.data)
+
+  const payload = verifyToken(token)
+  if (!payload) {
+    throw new Error('Invalid or expired token')
+  }
+
+  const user = await db.query.users.findFirst({
+    where: and(eq(users.id, payload.id), isNull(users.deletedAt)),
+    with: {
+      role: true,
+      leadingTeam: {
+        with: {
+          members: {
+            where: isNull(users.deletedAt),
+          },
+        },
+      },
+    },
+  })
+
+  if (!user || user.role?.roleName !== 'LEADER' || !user.leadingTeam) {
+    throw new Error('Only team leaders can access this information')
+  }
+
+  const memberIds = user.leadingTeam.members.map((m) => m.id)
+
+  if (memberIds.length === 0) {
+    return {
+      success: true,
+      data: [],
+    }
+  }
+
+  const assessments = await db.query.userAssessments.findMany({
+    where: inArray(userAssessments.userId, memberIds),
+    with: {
+      user: {
+        with: {
+          profile: true,
+        },
+      },
+      cycle: true,
+    },
+    orderBy: [userAssessments.createdAt],
+  })
+
+  return {
+    success: true,
+    data: assessments,
   }
 })

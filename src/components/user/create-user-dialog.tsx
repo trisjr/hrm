@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { format } from 'date-fns'
 import type { CreateUserInput } from '@/lib/user.schemas'
 import { createUserSchema } from '@/lib/user.schemas'
-import { createUserFn, getRolesFn } from '@/server/users.server'
+import { createUserFn, getRolesFn, getCareerBandsFn } from '@/server/users.server'
 import {
   Dialog,
   DialogContent,
@@ -45,9 +45,8 @@ export function CreateUserDialog({
   onSuccess,
 }: CreateUserDialogProps) {
   const [open, setOpen] = React.useState(false)
-  const [roles, setRoles] = React.useState<Array<{ id: number; roleName: string }>>(
-    [],
-  )
+  const [roles, setRoles] = React.useState<Array<{ id: number; roleName: string }>>([])
+  const [careerBands, setCareerBands] = React.useState<Array<{ id: number; bandName: string }>>([])
   const { token, user } = useAuthStore()
 
   const form = useForm<CreateUserInput>({
@@ -57,7 +56,8 @@ export function CreateUserDialog({
       email: '',
       phone: '',
       password: '',
-      roleId: undefined, // Initialize with undefined
+      roleId: undefined, 
+      careerBandId: undefined, // Default
       profile: {
         fullName: '',
         dob: undefined,
@@ -72,22 +72,25 @@ export function CreateUserDialog({
     },
   })
 
-  // Reset form when dialog closes
+  // Fetch data when dialog opens
   React.useEffect(() => {
-    if (!open) {
-      form.reset()
-    } else {
-      // Fetch roles when dialog opens
-      const fetchRoles = async () => {
+    if (open) {
+      const fetchData = async () => {
         try {
-          const rolesData = await getRolesFn()
+          const [rolesData, bandsData] = await Promise.all([
+            getRolesFn(),
+            getCareerBandsFn()
+          ])
           setRoles(rolesData)
+          setCareerBands(bandsData as any)
         } catch (error) {
-          console.error('Failed to fetch roles', error)
-          toast.error('Failed to load roles')
+          console.error('Failed to fetch data', error)
+          toast.error('Failed to load initial data')
         }
       }
-      fetchRoles()
+      fetchData()
+    } else {
+      form.reset()
     }
   }, [open, form])
 
@@ -117,17 +120,9 @@ export function CreateUserDialog({
   }
 
   // Filter roles based on current user permissions
-  // Requirement: Only Admin can add HR or Admin
-  // If current user is Admin, show all.
-  // If current user is HR, show non-Admin/non-HR roles?
-  // Wait, the prompt implies "Only Admin -> Admin/HR". It doesn't explicitly forbid HR from adding regular users.
-  // Assuming HR can add regular users (Staff, etc).
-  // Logic:
-  // If Admin: show all.
-  // If non-Admin: hide 'Admin' and 'HR' from the list.
   const filteredRoles = React.useMemo(() => {
-    if (user?.roleName === 'Admin') return roles
-    return roles.filter((r) => r.roleName !== 'Admin' && r.roleName !== 'HR')
+    if (user?.roleName === 'ADMIN') return roles
+    return roles.filter((r) => r.roleName !== 'ADMIN' && r.roleName !== 'HR')
   }, [roles, user?.roleName])
 
   return (
@@ -212,13 +207,8 @@ export function CreateUserDialog({
                         </FormControl>
                         <SelectContent>
                           {filteredRoles.map((role) => (
-                            <SelectItem
-                              key={role.id}
-                              value={role.id.toString()}
-                            >
-                              {role.roleName
-                                .toLowerCase()
-                                .replace(/\b\w/g, (l) => l.toUpperCase())}
+                            <SelectItem key={role.id} value={role.id.toString()}>
+                              {role.roleName.toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -227,6 +217,36 @@ export function CreateUserDialog({
                     </FormItem>
                   )}
                 />
+
+                {/* Career Band Select */}
+                <FormField
+                  control={form.control}
+                  name="careerBandId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Career Band</FormLabel>
+                      <Select
+                        onValueChange={(value) => field.onChange(Number(value))}
+                        defaultValue={field.value?.toString()}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select band" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {careerBands.map((band) => (
+                            <SelectItem key={band.id} value={band.id.toString()}>
+                              {band.bandName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <FormField
                   control={form.control}
                   name="phone"
@@ -339,41 +359,43 @@ export function CreateUserDialog({
                 />
               </div>
 
-              <FormField
-                control={form.control}
-                name="profile.idCardNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>ID Card Number</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="123456789"
-                        {...field}
-                        value={field.value || ''}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="profile.idCardNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>ID Card Number</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="123456789"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="profile.address"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Address</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="123 Main St, City, Country"
-                        {...field}
-                        value={field.value || ''}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                 <FormField
+                  control={form.control}
+                  name="profile.address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Address</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="123 Main St, City, Country"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <FormField
                 control={form.control}

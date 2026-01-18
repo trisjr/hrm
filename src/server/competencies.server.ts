@@ -788,6 +788,34 @@ export const getAssessmentCyclesFn = createServerFn({ method: 'POST' }).handler(
 )
 
 /**
+ * Get assessment cycle by ID
+ */
+export const getAssessmentCycleByIdFn = createServerFn({ method: 'POST' }).handler(
+  async (ctx) => {
+    const schema = z.object({
+      token: z.string(),
+      data: z.object({ cycleId: z.number() }),
+    })
+    const data = schema.parse(ctx.data)
+
+    await verifyAdminOrHR(data.token)
+
+    const cycle = await db.query.assessmentCycles.findFirst({
+      where: eq(assessmentCycles.id, data.data.cycleId),
+    })
+
+    if (!cycle) {
+      throw new Error('Assessment cycle not found')
+    }
+
+    return {
+      success: true,
+      data: cycle,
+    }
+  },
+)
+
+/**
  * Create a new assessment cycle
  * Validates that dates don't overlap with existing ACTIVE cycles
  */

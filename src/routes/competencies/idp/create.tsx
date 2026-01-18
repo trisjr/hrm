@@ -160,14 +160,38 @@ function RouteComponent() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold">Development Activities</h2>
-                <Button type="button" size="sm" onClick={() => append({ 
-                    competencyId: 0, 
-                    activityType: 'TRAINING', 
-                    description: '',
-                    targetDate: '' 
-                })}>
-                    <IconPlus className="mr-2 h-4 w-4" /> Add Activity
-                </Button>
+                <div className="flex gap-2">
+                    {competencies.some((c: any) => c.isWeakness) && (
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => {
+                                const gaps = competencies.filter((c: any) => c.isWeakness)
+                                const newActivities = gaps.map((c: any) => ({
+                                    competencyId: c.id,
+                                    activityType: 'TRAINING',
+                                    description: `Improve ${c.name} via training or mentoring to close the skill gap.`,
+                                    targetDate:  new Date(new Date().setMonth(new Date().getMonth() + 3)).toISOString().split('T')[0],
+                                }))
+                                
+                                if(confirm("This will replace current activities with suggested ones from your Gaps. Continue?")) {
+                                    form.setValue('activities', newActivities as any)
+                                }
+                            }}
+                        >
+                            <IconPlus className="mr-2 h-4 w-4" /> Auto-Fill Gaps
+                        </Button>
+                    )}
+                    <Button type="button" size="sm" onClick={() => append({ 
+                        competencyId: 0, 
+                        activityType: 'TRAINING', 
+                        description: '',
+                        targetDate: '' 
+                    })}>
+                        <IconPlus className="mr-2 h-4 w-4" /> Add Activity
+                    </Button>
+                </div>
             </div>
 
             {fields.map((field, index) => (

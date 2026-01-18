@@ -16,6 +16,7 @@ import { Route as ChangePasswordRouteImport } from './routes/change-password'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as RequestsIndexRouteImport } from './routes/requests/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as TeamAssessmentsIndexRouteImport } from './routes/team/assessments/index'
 import { Route as CompetenciesMyAssessmentIndexRouteImport } from './routes/competencies/my-assessment/index'
 import { Route as CompetenciesIdpIndexRouteImport } from './routes/competencies/idp/index'
 import { Route as AdminUsersIndexRouteImport } from './routes/admin/users/index'
@@ -24,6 +25,7 @@ import { Route as AdminRequestsIndexRouteImport } from './routes/admin/requests/
 import { Route as AdminProfileRequestsIndexRouteImport } from './routes/admin/profile-requests/index'
 import { Route as AdminEmailTemplatesIndexRouteImport } from './routes/admin/email-templates/index'
 import { Route as AdminCompetenciesIndexRouteImport } from './routes/admin/competencies/index'
+import { Route as TeamCompetenciesAnalyticsRouteImport } from './routes/team/competencies/analytics'
 import { Route as CompetenciesResultsAssessmentIdRouteImport } from './routes/competencies/results/$assessmentId'
 import { Route as CompetenciesIdpCreateRouteImport } from './routes/competencies/idp/create'
 import { Route as CompetenciesAssessmentsAssessmentIdRouteImport } from './routes/competencies/assessments/$assessmentId'
@@ -32,6 +34,7 @@ import { Route as AdminTeamsTeamIdRouteImport } from './routes/admin/teams/$team
 import { Route as AdminCompetenciesAnalyticsRouteImport } from './routes/admin/competencies/analytics'
 import { Route as AdminCompetenciesRequirementsIndexRouteImport } from './routes/admin/competencies/requirements/index'
 import { Route as AdminCompetenciesCyclesIndexRouteImport } from './routes/admin/competencies/cycles/index'
+import { Route as AdminCompetenciesCyclesCycleIdRouteImport } from './routes/admin/competencies/cycles/$cycleId'
 
 const VerifyRoute = VerifyRouteImport.update({
   id: '/verify',
@@ -66,6 +69,11 @@ const RequestsIndexRoute = RequestsIndexRouteImport.update({
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/admin/',
   path: '/admin/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TeamAssessmentsIndexRoute = TeamAssessmentsIndexRouteImport.update({
+  id: '/team/assessments/',
+  path: '/team/assessments/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CompetenciesMyAssessmentIndexRoute =
@@ -111,6 +119,12 @@ const AdminCompetenciesIndexRoute = AdminCompetenciesIndexRouteImport.update({
   path: '/admin/competencies/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TeamCompetenciesAnalyticsRoute =
+  TeamCompetenciesAnalyticsRouteImport.update({
+    id: '/team/competencies/analytics',
+    path: '/team/competencies/analytics',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const CompetenciesResultsAssessmentIdRoute =
   CompetenciesResultsAssessmentIdRouteImport.update({
     id: '/competencies/results/$assessmentId',
@@ -156,6 +170,12 @@ const AdminCompetenciesCyclesIndexRoute =
     path: '/admin/competencies/cycles/',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AdminCompetenciesCyclesCycleIdRoute =
+  AdminCompetenciesCyclesCycleIdRouteImport.update({
+    id: '/admin/competencies/cycles/$cycleId',
+    path: '/admin/competencies/cycles/$cycleId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -171,6 +191,7 @@ export interface FileRoutesByFullPath {
   '/competencies/assessments/$assessmentId': typeof CompetenciesAssessmentsAssessmentIdRoute
   '/competencies/idp/create': typeof CompetenciesIdpCreateRoute
   '/competencies/results/$assessmentId': typeof CompetenciesResultsAssessmentIdRoute
+  '/team/competencies/analytics': typeof TeamCompetenciesAnalyticsRoute
   '/admin/competencies': typeof AdminCompetenciesIndexRoute
   '/admin/email-templates': typeof AdminEmailTemplatesIndexRoute
   '/admin/profile-requests': typeof AdminProfileRequestsIndexRoute
@@ -179,6 +200,8 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AdminUsersIndexRoute
   '/competencies/idp': typeof CompetenciesIdpIndexRoute
   '/competencies/my-assessment': typeof CompetenciesMyAssessmentIndexRoute
+  '/team/assessments': typeof TeamAssessmentsIndexRoute
+  '/admin/competencies/cycles/$cycleId': typeof AdminCompetenciesCyclesCycleIdRoute
   '/admin/competencies/cycles': typeof AdminCompetenciesCyclesIndexRoute
   '/admin/competencies/requirements': typeof AdminCompetenciesRequirementsIndexRoute
 }
@@ -196,6 +219,7 @@ export interface FileRoutesByTo {
   '/competencies/assessments/$assessmentId': typeof CompetenciesAssessmentsAssessmentIdRoute
   '/competencies/idp/create': typeof CompetenciesIdpCreateRoute
   '/competencies/results/$assessmentId': typeof CompetenciesResultsAssessmentIdRoute
+  '/team/competencies/analytics': typeof TeamCompetenciesAnalyticsRoute
   '/admin/competencies': typeof AdminCompetenciesIndexRoute
   '/admin/email-templates': typeof AdminEmailTemplatesIndexRoute
   '/admin/profile-requests': typeof AdminProfileRequestsIndexRoute
@@ -204,6 +228,8 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AdminUsersIndexRoute
   '/competencies/idp': typeof CompetenciesIdpIndexRoute
   '/competencies/my-assessment': typeof CompetenciesMyAssessmentIndexRoute
+  '/team/assessments': typeof TeamAssessmentsIndexRoute
+  '/admin/competencies/cycles/$cycleId': typeof AdminCompetenciesCyclesCycleIdRoute
   '/admin/competencies/cycles': typeof AdminCompetenciesCyclesIndexRoute
   '/admin/competencies/requirements': typeof AdminCompetenciesRequirementsIndexRoute
 }
@@ -222,6 +248,7 @@ export interface FileRoutesById {
   '/competencies/assessments/$assessmentId': typeof CompetenciesAssessmentsAssessmentIdRoute
   '/competencies/idp/create': typeof CompetenciesIdpCreateRoute
   '/competencies/results/$assessmentId': typeof CompetenciesResultsAssessmentIdRoute
+  '/team/competencies/analytics': typeof TeamCompetenciesAnalyticsRoute
   '/admin/competencies/': typeof AdminCompetenciesIndexRoute
   '/admin/email-templates/': typeof AdminEmailTemplatesIndexRoute
   '/admin/profile-requests/': typeof AdminProfileRequestsIndexRoute
@@ -230,6 +257,8 @@ export interface FileRoutesById {
   '/admin/users/': typeof AdminUsersIndexRoute
   '/competencies/idp/': typeof CompetenciesIdpIndexRoute
   '/competencies/my-assessment/': typeof CompetenciesMyAssessmentIndexRoute
+  '/team/assessments/': typeof TeamAssessmentsIndexRoute
+  '/admin/competencies/cycles/$cycleId': typeof AdminCompetenciesCyclesCycleIdRoute
   '/admin/competencies/cycles/': typeof AdminCompetenciesCyclesIndexRoute
   '/admin/competencies/requirements/': typeof AdminCompetenciesRequirementsIndexRoute
 }
@@ -249,6 +278,7 @@ export interface FileRouteTypes {
     | '/competencies/assessments/$assessmentId'
     | '/competencies/idp/create'
     | '/competencies/results/$assessmentId'
+    | '/team/competencies/analytics'
     | '/admin/competencies'
     | '/admin/email-templates'
     | '/admin/profile-requests'
@@ -257,6 +287,8 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/competencies/idp'
     | '/competencies/my-assessment'
+    | '/team/assessments'
+    | '/admin/competencies/cycles/$cycleId'
     | '/admin/competencies/cycles'
     | '/admin/competencies/requirements'
   fileRoutesByTo: FileRoutesByTo
@@ -274,6 +306,7 @@ export interface FileRouteTypes {
     | '/competencies/assessments/$assessmentId'
     | '/competencies/idp/create'
     | '/competencies/results/$assessmentId'
+    | '/team/competencies/analytics'
     | '/admin/competencies'
     | '/admin/email-templates'
     | '/admin/profile-requests'
@@ -282,6 +315,8 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/competencies/idp'
     | '/competencies/my-assessment'
+    | '/team/assessments'
+    | '/admin/competencies/cycles/$cycleId'
     | '/admin/competencies/cycles'
     | '/admin/competencies/requirements'
   id:
@@ -299,6 +334,7 @@ export interface FileRouteTypes {
     | '/competencies/assessments/$assessmentId'
     | '/competencies/idp/create'
     | '/competencies/results/$assessmentId'
+    | '/team/competencies/analytics'
     | '/admin/competencies/'
     | '/admin/email-templates/'
     | '/admin/profile-requests/'
@@ -307,6 +343,8 @@ export interface FileRouteTypes {
     | '/admin/users/'
     | '/competencies/idp/'
     | '/competencies/my-assessment/'
+    | '/team/assessments/'
+    | '/admin/competencies/cycles/$cycleId'
     | '/admin/competencies/cycles/'
     | '/admin/competencies/requirements/'
   fileRoutesById: FileRoutesById
@@ -325,6 +363,7 @@ export interface RootRouteChildren {
   CompetenciesAssessmentsAssessmentIdRoute: typeof CompetenciesAssessmentsAssessmentIdRoute
   CompetenciesIdpCreateRoute: typeof CompetenciesIdpCreateRoute
   CompetenciesResultsAssessmentIdRoute: typeof CompetenciesResultsAssessmentIdRoute
+  TeamCompetenciesAnalyticsRoute: typeof TeamCompetenciesAnalyticsRoute
   AdminCompetenciesIndexRoute: typeof AdminCompetenciesIndexRoute
   AdminEmailTemplatesIndexRoute: typeof AdminEmailTemplatesIndexRoute
   AdminProfileRequestsIndexRoute: typeof AdminProfileRequestsIndexRoute
@@ -333,6 +372,8 @@ export interface RootRouteChildren {
   AdminUsersIndexRoute: typeof AdminUsersIndexRoute
   CompetenciesIdpIndexRoute: typeof CompetenciesIdpIndexRoute
   CompetenciesMyAssessmentIndexRoute: typeof CompetenciesMyAssessmentIndexRoute
+  TeamAssessmentsIndexRoute: typeof TeamAssessmentsIndexRoute
+  AdminCompetenciesCyclesCycleIdRoute: typeof AdminCompetenciesCyclesCycleIdRoute
   AdminCompetenciesCyclesIndexRoute: typeof AdminCompetenciesCyclesIndexRoute
   AdminCompetenciesRequirementsIndexRoute: typeof AdminCompetenciesRequirementsIndexRoute
 }
@@ -386,6 +427,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/team/assessments/': {
+      id: '/team/assessments/'
+      path: '/team/assessments'
+      fullPath: '/team/assessments'
+      preLoaderRoute: typeof TeamAssessmentsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/competencies/my-assessment/': {
@@ -444,6 +492,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCompetenciesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/team/competencies/analytics': {
+      id: '/team/competencies/analytics'
+      path: '/team/competencies/analytics'
+      fullPath: '/team/competencies/analytics'
+      preLoaderRoute: typeof TeamCompetenciesAnalyticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/competencies/results/$assessmentId': {
       id: '/competencies/results/$assessmentId'
       path: '/competencies/results/$assessmentId'
@@ -500,6 +555,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCompetenciesCyclesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/competencies/cycles/$cycleId': {
+      id: '/admin/competencies/cycles/$cycleId'
+      path: '/admin/competencies/cycles/$cycleId'
+      fullPath: '/admin/competencies/cycles/$cycleId'
+      preLoaderRoute: typeof AdminCompetenciesCyclesCycleIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -518,6 +580,7 @@ const rootRouteChildren: RootRouteChildren = {
     CompetenciesAssessmentsAssessmentIdRoute,
   CompetenciesIdpCreateRoute: CompetenciesIdpCreateRoute,
   CompetenciesResultsAssessmentIdRoute: CompetenciesResultsAssessmentIdRoute,
+  TeamCompetenciesAnalyticsRoute: TeamCompetenciesAnalyticsRoute,
   AdminCompetenciesIndexRoute: AdminCompetenciesIndexRoute,
   AdminEmailTemplatesIndexRoute: AdminEmailTemplatesIndexRoute,
   AdminProfileRequestsIndexRoute: AdminProfileRequestsIndexRoute,
@@ -526,6 +589,8 @@ const rootRouteChildren: RootRouteChildren = {
   AdminUsersIndexRoute: AdminUsersIndexRoute,
   CompetenciesIdpIndexRoute: CompetenciesIdpIndexRoute,
   CompetenciesMyAssessmentIndexRoute: CompetenciesMyAssessmentIndexRoute,
+  TeamAssessmentsIndexRoute: TeamAssessmentsIndexRoute,
+  AdminCompetenciesCyclesCycleIdRoute: AdminCompetenciesCyclesCycleIdRoute,
   AdminCompetenciesCyclesIndexRoute: AdminCompetenciesCyclesIndexRoute,
   AdminCompetenciesRequirementsIndexRoute:
     AdminCompetenciesRequirementsIndexRoute,

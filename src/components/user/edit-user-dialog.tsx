@@ -6,7 +6,7 @@ import { format } from 'date-fns'
 import type { UpdateUserInput } from '@/lib/user.schemas'
 import type { UserResponse } from '@/lib/user.types'
 import { updateUserSchema } from '@/lib/user.schemas'
-import { getRolesFn, updateUserFn } from '@/server/users.server'
+import { getRolesFn, updateUserFn, getCareerBandsFn } from '@/server/users.server'
 import {
   Dialog,
   DialogContent,
@@ -49,9 +49,8 @@ export function EditUserDialog({
   onSuccess,
 }: EditUserDialogProps) {
   const { token, user: currentUser } = useAuthStore()
-  const [roles, setRoles] = React.useState<Array<{ id: number; roleName: string }>>(
-    [],
-  )
+  const [roles, setRoles] = React.useState<Array<{ id: number; roleName: string }>>([])
+  const [careerBands, setCareerBands] = React.useState<Array<{ id: number; bandName: string }>>([])
 
   const form = useForm<UpdateUserInput>({
     resolver: zodResolver(updateUserSchema),
@@ -60,6 +59,7 @@ export function EditUserDialog({
       phone: '',
       status: 'ACTIVE',
       roleId: undefined,
+      careerBandId: undefined,
       profile: {
         fullName: '',
         dob: undefined,
@@ -74,7 +74,27 @@ export function EditUserDialog({
     },
   })
 
-  // Reset form when user changes
+  // Fetch roles and career bands when dialog opens
+  React.useEffect(() => {
+    if (open) {
+      const fetchData = async () => {
+        try {
+          const [rolesData, bandsData] = await Promise.all([
+            getRolesFn(),
+            getCareerBandsFn()
+          ])
+          setRoles(rolesData)
+          setCareerBands(bandsData as any)
+        } catch (error) {
+          console.error('Failed to fetch data', error)
+          toast.error('Failed to load initial data')
+        }
+      }
+      fetchData()
+    }
+  }, [open])
+
+  // Reset form when user changes or dialog opens
   React.useEffect(() => {
     if (user && open) {
       form.reset({
@@ -82,6 +102,7 @@ export function EditUserDialog({
         phone: user.phone || '',
         status: user.status as any,
         roleId: user.roleId || undefined,
+        careerBandId: user.careerBandId || undefined,
         profile: {
           fullName: user.profile?.fullName || '',
           dob: user.profile?.dob || undefined,
@@ -94,27 +115,10 @@ export function EditUserDialog({
           avatarUrl: user.profile?.avatarUrl || undefined,
         },
       })
+    } else if (!open) {
+      form.reset()
     }
   }, [user, open, form])
-
-  // Reset form when dialog closes and Fetch roles
-  React.useEffect(() => {
-    if (!open) {
-      form.reset()
-    } else {
-      // Fetch roles
-      const fetchRoles = async () => {
-        try {
-          const rolesData = await getRolesFn()
-          setRoles(rolesData)
-        } catch (error) {
-          console.error('Failed to fetch roles', error)
-          toast.error('Failed to load roles')
-        }
-      }
-      fetchRoles()
-    }
-  }, [open, form])
 
   async function onSubmit(values: UpdateUserInput) {
     if (!user) return
@@ -143,8 +147,8 @@ export function EditUserDialog({
 
   // Filter roles based on current user permissions
   const filteredRoles = React.useMemo(() => {
-    if (currentUser?.roleName === 'Admin') return roles
-    return roles.filter((r) => r.roleName !== 'Admin' && r.roleName !== 'HR')
+    if (currentUser?.roleName === 'ADMIN') return roles
+    return roles.filter((r) => r.roleName !== 'ADMIN' && r.roleName !== 'HR')
   }, [roles, currentUser?.roleName])
 
   return (
@@ -255,6 +259,39 @@ export function EditUserDialog({
                   )}
                 />
 
+                {/* Career Band Select */}
+                <FormField
+                  control={form.control}
+                  name="careerBandId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Career Band</FormLabel>
+                      <Select
+                        onValueChange={(value) => field.onChange(Number(value))}
+                        defaultValue={field.value?.toString()}
+                        value={field.value ? field.value.toString() : undefined}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select band" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {careerBands.map((band) => (
+                            <SelectItem
+                              key={band.id}
+                              value={band.id.toString()}
+                            >
+                              {band.bandName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <FormField
                   control={form.control}
                   name="phone"
@@ -348,41 +385,43 @@ export function EditUserDialog({
                 />
               </div>
 
-              <FormField
-                control={form.control}
-                name="profile.idCardNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>ID Card Number</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="123456789"
-                        {...field}
-                        value={field.value || ''}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="profile.idCardNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>ID Card Number</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="123456789"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <FormField
-                control={form.control}
-                name="profile.address"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Address</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="123 Main St, City, Country"
-                        {...field}
-                        value={field.value || ''}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="profile.address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Address</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="123 Main St, City, Country"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <FormField
                 control={form.control}

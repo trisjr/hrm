@@ -37,6 +37,15 @@ export const getRolesFn = createServerFn({ method: 'GET' }).handler(
 )
 
 /**
+ * Get List Career Bands
+ */
+export const getCareerBandsFn = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    return db.select().from(careerBands).orderBy(careerBands.bandName)
+  },
+)
+
+/**
  * Create User
  * Create new user with profile and verification token
  * Default status is INACTIVE, requires email verification to activate

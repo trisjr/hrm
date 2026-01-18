@@ -99,6 +99,18 @@ const ALL_MENU_ITEMS: Array<MenuItem> = [
     icon: IconFileText,
     roles: ['LEADER'],
   },
+  {
+    title: 'Team Assessments',
+    url: '/team/assessments',
+    icon: IconTarget,
+    roles: ['LEADER'],
+  },
+  {
+    title: 'Team Competency Analytics',
+    url: '/team/competencies/analytics',
+    icon: IconChartBar,
+    roles: ['LEADER'],
+  },
 
   // ADMIN/HR only: Full admin features
   {
