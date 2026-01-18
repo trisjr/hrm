@@ -63,7 +63,7 @@ function RouteComponent() {
   const { assessment, details, meta } = data.data
 
   // Determine mode
-  let mode: 'SELF' | 'LEADER' = 'SELF' // default
+  let mode: 'SELF' | 'LEADER' | 'DISCUSSION' | 'VIEW' = 'SELF' // default
   let isReadOnly = true
 
   if (meta.isOwner && assessment.status === 'SELF_ASSESSING') {
@@ -72,14 +72,13 @@ function RouteComponent() {
   } else if (meta.isLeader && assessment.status === 'LEADER_ASSESSING') {
     mode = 'LEADER'
     isReadOnly = false
+  } else if ((meta.isLeader || meta.isAdminOrHR) && assessment.status === 'DISCUSSION') {
+    // Both Leader and Admin/HR can potentially finalize, but usually Leader.
+    mode = 'DISCUSSION'
+    isReadOnly = false
   } else {
-    // For view mode, show leader view if leader/admin/hr, otherwise self view (or mixed)
-    // AssessmentDetail uses 'mode' to decide which score to initialize.
-    // In view mode, we might want to see ONE specific view or BOTH.
-    // Current AssessmentDetail is designed for action.
-    // Let's pass 'SELF' for now as ReadOnly view logic is handled inside.
-    // If we want to view Final results, we need to update AssessmentDetail to show Final Scores.
-    mode = 'SELF'
+    // View mode Logic
+    mode = 'VIEW'
     isReadOnly = true
   }
 
@@ -94,7 +93,7 @@ function RouteComponent() {
       <AssessmentDetail
         assessment={assessment}
         details={details}
-        mode={mode}
+        mode={mode as any}
         isReadOnly={isReadOnly}
       />
     </div>

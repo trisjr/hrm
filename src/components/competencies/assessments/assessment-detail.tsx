@@ -14,13 +14,14 @@ import { Progress } from '@/components/ui/progress'
 import {
   submitSelfAssessmentFn,
   submitLeaderAssessmentFn,
+  finalizeAssessmentFn,
 } from '@/server/assessments.server'
 import { useAuthStore } from '@/store/auth.store'
 
 interface AssessmentDetailProps {
   assessment: any
   details: any[]
-  mode: 'SELF' | 'LEADER'
+  mode: 'SELF' | 'LEADER' | 'DISCUSSION' | 'VIEW'
   isReadOnly?: boolean
 }
 
@@ -33,13 +34,36 @@ export function AssessmentDetail({
   const token = useAuthStore((state: any) => state.token)
   const queryClient = useQueryClient()
   const [scores, setScores] = useState<Record<number, { score: number; note: string }>>({})
+  const [overallFeedback, setOverallFeedback] = useState<string>(assessment.feedback || '')
 
   // Initialize scores/notes from details
   useState(() => {
     const initialScores: Record<number, { score: number; note: string }> = {}
     details.forEach((d) => {
-      const score = mode === 'SELF' ? d.selfScore : d.leaderScore
-      const note = d.note
+      let score
+      let note = d.note // Note handling might need separation for self/leader/final notes if database supports it. Currently schema has one 'note' field in detail but spec implies separate?
+      // Schema check: user_assessment_details has `note`. It seems shared? Or maybe we overwrite? 
+      // If shared, that's bad for history.
+      // Looking at `server/assessments.server.ts`:
+      // submitSelfAssessmentFn updates `selfScore` and `note`.
+      // submitLeaderAssessmentFn updates `leaderScore` and `note`. 
+      // This means `note` is overwritten! This is a schema limitation I must work with or I should have checked schema better.
+      // However, `user_assessment_details` usually has columns. Let's assume `note` is the active note for the current phase.
+      // WAit, if checking schema in server buffer... 
+      // `submitLeaderAssessmentFn` updates `leaderScore` and `note`.
+      // `submitSelfAssessmentFn` updates `selfScore` and `note`.
+      // So `note` is indeed shared/overwritten.
+      
+      if (mode === 'SELF') {
+        score = d.selfScore
+      } else if (mode === 'LEADER') {
+        score = d.leaderScore
+      } else if (mode === 'DISCUSSION') {
+        score = d.finalScore || d.leaderScore // Default final to leader score
+      } else { // VIEW
+        score = d.finalScore || d.leaderScore || d.selfScore
+      }
+
       if (score) {
         initialScores[d.competencyId] = { score, note: note || '' }
       }
@@ -70,18 +94,33 @@ export function AssessmentDetail({
           score: data.score,
           note: data.note,
         })),
+        // For finalize, we need specialized payload formatting if different?
+        // submitLeaderAssessmentFn takes { assessmentId, scores: [...] }
+        // finalizeAssessmentFn takes { assessmentId, finalScores: [{ competencyId, finalScore }] }
       }
 
       if (mode === 'SELF') {
         await submitSelfAssessmentFn({ data: { token: token!, data: payload } } as any)
-      } else {
+      } else if (mode === 'LEADER') {
         await submitLeaderAssessmentFn({ data: { token: token!, data: payload } } as any)
+      } else if (mode === 'DISCUSSION') {
+         // Transform payload for finalize
+         const finalizePayload = {
+            assessmentId: assessment.id,
+            finalScores: payload.scores.map(s => ({
+                competencyId: s.competencyId,
+                finalScore: s.score
+            })),
+            feedback: overallFeedback || "No feedback provided."
+         }
+         await finalizeAssessmentFn({ data: { token: token!, data: finalizePayload } } as any)
       }
     },
     onSuccess: () => {
       toast.success('Assessment submitted successfully')
-      queryClient.invalidateQueries({ queryKey: ['my-assessment'] })
-      queryClient.invalidateQueries({ queryKey: ['team-assessments'] })
+      queryClient.invalidateQueries({ queryKey: ['assessment', assessment.id.toString()] })
+      // Also invalidate list queries properly?
+      // queryClient.invalidateQueries({ queryKey: ['team-assessments'] })
     },
     onError: (error: any) => {
       toast.error(error.message || 'Failed to submit assessment')
@@ -99,12 +138,39 @@ export function AssessmentDetail({
     <div className="max-w-4xl mx-auto pb-20">
       {/* Header Info */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">
-           {mode === 'SELF' ? 'Self Assessment' : 'Leader Assessment'}
-        </h1>
-        <p className="text-muted-foreground text-lg">
-          {assessment.cycle.name} • {assessment.user?.profile?.fullName || 'User'}
-        </p>
+        <div className="flex justify-between items-start">
+            <div>
+                <h1 className="text-3xl font-bold mb-2">
+                {mode === 'SELF' && 'Self Assessment'}
+                {mode === 'LEADER' && 'Leader Assessment'}
+                {mode === 'DISCUSSION' && 'Finalize Assessment'}
+                {mode === 'VIEW' && 'Assessment Details'}
+                </h1>
+                <p className="text-muted-foreground text-lg">
+                {assessment.cycle.name} • {assessment.user?.profile?.fullName || 'User'}
+                </p>
+            </div>
+            {/* Legend for scores OR View Results button */}
+             {assessment.status === 'DONE' ? (
+                 <Button 
+                   onClick={() => {
+                     // Navigate to results page
+                     window.location.href = `/competencies/results/${assessment.id}`
+                   }}
+                   className="flex items-center gap-2"
+                 >
+                   <IconCheck className="h-4 w-4" />
+                   View Results & Gap Analysis
+                 </Button>
+             ) : (mode === 'LEADER' || mode === 'DISCUSSION') && (
+                 <div className="bg-muted p-3 rounded-md text-xs space-y-1">
+                     <div className="font-semibold text-muted-foreground mb-1">Legend</div>
+                     {mode === 'LEADER' && <div>User Self Score shown for reference</div>}
+                     {mode === 'DISCUSSION' && <div>Leader Score shown for reference</div>}
+                 </div>
+             )}
+        </div>
+        
         <div className="mt-4 flex items-center gap-4 text-sm text-muted-foreground">
           <div className="flex items-center">
             <span className="font-semibold mr-2">Status:</span>
@@ -140,20 +206,62 @@ export function AssessmentDetail({
             </span>
           </h2>
           
-          {groupDetails.map((detail: any) => (
-            <AssessmentForm
-              key={detail.competencyId}
-              competency={detail.competency}
-              levels={detail.competency.competencyLevels || []} // Assuming levels are joined, need to check query
-              requiredLevel={detail.requiredLevel}
-              initialScore={mode === 'SELF' ? detail.selfScore : detail.leaderScore}
-              initialNote={detail.note}
-              mode={isReadOnly ? 'VIEW' : mode}
-              onChange={(s, n) => handleScoreChange(detail.competencyId, s, n)}
-            />
-          ))}
+          {groupDetails.map((detail: any) => {
+            // Determine props based on mode
+            let initialScore = null
+            let referenceScore = null
+            let referenceLabel = undefined
+            let referenceNote = undefined // Note handling is tricky as discussed. 
+
+            if (mode === 'SELF') {
+                initialScore = detail.selfScore
+            } else if (mode === 'LEADER') {
+                initialScore = detail.leaderScore
+                referenceScore = detail.selfScore
+                referenceLabel = "Employee Self-Rating"
+                // referenceNote = detail.note? // If note was self-note.
+            } else if (mode === 'DISCUSSION') {
+                initialScore = detail.finalScore || detail.leaderScore
+                referenceScore = detail.leaderScore // Show what leader rated previously
+                referenceLabel = "Leader's Draft Rating"
+            } else { // VIEW
+                initialScore = detail.finalScore || detail.leaderScore || detail.selfScore
+            }
+
+            return (
+                <AssessmentForm
+                key={detail.competencyId}
+                competency={detail.competency}
+                levels={detail.competency.competencyLevels || []}
+                requiredLevel={detail.requiredLevel}
+                initialScore={initialScore}
+                initialNote={detail.note} // This note is shared, so it shows latest note
+                referenceScore={referenceScore}
+                referenceLabel={referenceLabel}
+                referenceNote={referenceNote}
+                mode={isReadOnly ? 'VIEW' : mode}
+                onChange={(s, n) => handleScoreChange(detail.competencyId, s, n)}
+                />
+            )
+          })}
         </div>
       ))}
+
+      {/* Overall Feedback (DISCUSSION Mode) */}
+      {mode === 'DISCUSSION' && !isReadOnly && (
+        <div className="mb-24 p-6 border rounded-lg bg-card shadow-sm">
+           <h3 className="text-lg font-semibold mb-4">Final Summary & Feedback</h3>
+           <p className="text-sm text-muted-foreground mb-3">
+             Please provide an overall summary of the discussion and final feedback for the employee.
+           </p>
+           <textarea 
+             className="w-full min-h-[120px] p-3 rounded-md border text-sm focus:ring-2 focus:ring-primary focus:outline-none"
+             placeholder="Enter final summary feedback..."
+             value={overallFeedback}
+             onChange={(e) => setOverallFeedback(e.target.value)}
+           />
+        </div>
+      )}
 
       {/* Action Footer */}
       {!isReadOnly && (

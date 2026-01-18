@@ -29,6 +29,7 @@ import { Route as CompetenciesIdpCreateRouteImport } from './routes/competencies
 import { Route as CompetenciesAssessmentsAssessmentIdRouteImport } from './routes/competencies/assessments/$assessmentId'
 import { Route as AdminTeamsAnalyticsRouteImport } from './routes/admin/teams/analytics'
 import { Route as AdminTeamsTeamIdRouteImport } from './routes/admin/teams/$teamId'
+import { Route as AdminCompetenciesAnalyticsRouteImport } from './routes/admin/competencies/analytics'
 import { Route as AdminCompetenciesRequirementsIndexRouteImport } from './routes/admin/competencies/requirements/index'
 import { Route as AdminCompetenciesCyclesIndexRouteImport } from './routes/admin/competencies/cycles/index'
 
@@ -137,6 +138,12 @@ const AdminTeamsTeamIdRoute = AdminTeamsTeamIdRouteImport.update({
   path: '/admin/teams/$teamId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminCompetenciesAnalyticsRoute =
+  AdminCompetenciesAnalyticsRouteImport.update({
+    id: '/admin/competencies/analytics',
+    path: '/admin/competencies/analytics',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AdminCompetenciesRequirementsIndexRoute =
   AdminCompetenciesRequirementsIndexRouteImport.update({
     id: '/admin/competencies/requirements/',
@@ -158,6 +165,7 @@ export interface FileRoutesByFullPath {
   '/verify': typeof VerifyRoute
   '/admin': typeof AdminIndexRoute
   '/requests': typeof RequestsIndexRoute
+  '/admin/competencies/analytics': typeof AdminCompetenciesAnalyticsRoute
   '/admin/teams/$teamId': typeof AdminTeamsTeamIdRoute
   '/admin/teams/analytics': typeof AdminTeamsAnalyticsRoute
   '/competencies/assessments/$assessmentId': typeof CompetenciesAssessmentsAssessmentIdRoute
@@ -182,6 +190,7 @@ export interface FileRoutesByTo {
   '/verify': typeof VerifyRoute
   '/admin': typeof AdminIndexRoute
   '/requests': typeof RequestsIndexRoute
+  '/admin/competencies/analytics': typeof AdminCompetenciesAnalyticsRoute
   '/admin/teams/$teamId': typeof AdminTeamsTeamIdRoute
   '/admin/teams/analytics': typeof AdminTeamsAnalyticsRoute
   '/competencies/assessments/$assessmentId': typeof CompetenciesAssessmentsAssessmentIdRoute
@@ -207,6 +216,7 @@ export interface FileRoutesById {
   '/verify': typeof VerifyRoute
   '/admin/': typeof AdminIndexRoute
   '/requests/': typeof RequestsIndexRoute
+  '/admin/competencies/analytics': typeof AdminCompetenciesAnalyticsRoute
   '/admin/teams/$teamId': typeof AdminTeamsTeamIdRoute
   '/admin/teams/analytics': typeof AdminTeamsAnalyticsRoute
   '/competencies/assessments/$assessmentId': typeof CompetenciesAssessmentsAssessmentIdRoute
@@ -233,6 +243,7 @@ export interface FileRouteTypes {
     | '/verify'
     | '/admin'
     | '/requests'
+    | '/admin/competencies/analytics'
     | '/admin/teams/$teamId'
     | '/admin/teams/analytics'
     | '/competencies/assessments/$assessmentId'
@@ -257,6 +268,7 @@ export interface FileRouteTypes {
     | '/verify'
     | '/admin'
     | '/requests'
+    | '/admin/competencies/analytics'
     | '/admin/teams/$teamId'
     | '/admin/teams/analytics'
     | '/competencies/assessments/$assessmentId'
@@ -281,6 +293,7 @@ export interface FileRouteTypes {
     | '/verify'
     | '/admin/'
     | '/requests/'
+    | '/admin/competencies/analytics'
     | '/admin/teams/$teamId'
     | '/admin/teams/analytics'
     | '/competencies/assessments/$assessmentId'
@@ -306,6 +319,7 @@ export interface RootRouteChildren {
   VerifyRoute: typeof VerifyRoute
   AdminIndexRoute: typeof AdminIndexRoute
   RequestsIndexRoute: typeof RequestsIndexRoute
+  AdminCompetenciesAnalyticsRoute: typeof AdminCompetenciesAnalyticsRoute
   AdminTeamsTeamIdRoute: typeof AdminTeamsTeamIdRoute
   AdminTeamsAnalyticsRoute: typeof AdminTeamsAnalyticsRoute
   CompetenciesAssessmentsAssessmentIdRoute: typeof CompetenciesAssessmentsAssessmentIdRoute
@@ -465,6 +479,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminTeamsTeamIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/competencies/analytics': {
+      id: '/admin/competencies/analytics'
+      path: '/admin/competencies/analytics'
+      fullPath: '/admin/competencies/analytics'
+      preLoaderRoute: typeof AdminCompetenciesAnalyticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/competencies/requirements/': {
       id: '/admin/competencies/requirements/'
       path: '/admin/competencies/requirements'
@@ -490,6 +511,7 @@ const rootRouteChildren: RootRouteChildren = {
   VerifyRoute: VerifyRoute,
   AdminIndexRoute: AdminIndexRoute,
   RequestsIndexRoute: RequestsIndexRoute,
+  AdminCompetenciesAnalyticsRoute: AdminCompetenciesAnalyticsRoute,
   AdminTeamsTeamIdRoute: AdminTeamsTeamIdRoute,
   AdminTeamsAnalyticsRoute: AdminTeamsAnalyticsRoute,
   CompetenciesAssessmentsAssessmentIdRoute:

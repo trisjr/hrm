@@ -978,3 +978,327 @@ export const startMyAssessmentFn = createServerFn({
     data: newAssessment,
   }
 })
+
+/**
+ * Get Competency Radar Chart Data
+ * 
+ * @description Returns aggregated competency data grouped by competency groups
+ * for radar chart visualization. Shows final scores vs required levels.
+ * 
+ * **Use Cases**:
+ * - Individual assessment results page (userId + assessmentId)
+ * - Team overview (multiple users)
+ * 
+ * @param token - JWT authentication token
+ * @param params.userId - Optional user ID (defaults to current user)
+ * @param params.assessmentId - Optional specific assessment ID
+ * 
+ * @returns Radar chart data grouped by competency groups
+ */
+export const getCompetencyRadarDataFn = createServerFn({
+  method: 'POST',
+}).handler(async (ctx) => {
+  const schema = z.object({
+    token: z.string(),
+    params: z.object({
+      userId: z.number().int().positive().optional(),
+      assessmentId: z.number().int().positive().optional(),
+    }).optional(),
+  })
+  const data = schema.parse(ctx.data)
+
+  const user = await verifyUser(data.token)
+  const targetUserId = data.params?.userId || user.id
+
+  // Permission check: Can only view own data unless Admin/HR/Leader
+  const isAdminOrHR = user.role?.roleName === 'ADMIN' || user.role?.roleName === 'HR'
+  if (targetUserId !== user.id && !isAdminOrHR) {
+    // Check if user is leader of target user
+    const targetUser = await db.query.users.findFirst({
+      where: eq(users.id, targetUserId),
+      with: { team: true },
+    })
+    if (!targetUser?.team || targetUser.team.leaderId !== user.id) {
+      throw new Error('You do not have permission to view this data')
+    }
+  }
+
+  // Find assessment
+  let assessment
+  if (data.params?.assessmentId) {
+    assessment = await db.query.userAssessments.findFirst({
+      where: eq(userAssessments.id, data.params.assessmentId),
+      with: { user: { with: { careerBand: true } } },
+    })
+  } else {
+    // Get most recent DONE assessment for user
+    assessment = await db.query.userAssessments.findFirst({
+      where: and(
+        eq(userAssessments.userId, targetUserId),
+        eq(userAssessments.status, 'DONE')
+      ),
+      with: { user: { with: { careerBand: true } } },
+      orderBy: (userAssessments, { desc }) => [desc(userAssessments.createdAt)],
+    })
+  }
+
+  if (!assessment) {
+    return {
+      success: true,
+      data: { groups: [] },
+    }
+  }
+
+  // Get assessment details with competency and group info
+  const details = await db
+    .select({
+      competencyId: userAssessmentDetails.competencyId,
+      finalScore: userAssessmentDetails.finalScore,
+      competency: competencies,
+      group: competencyGroups,
+      requiredLevel: competencyRequirements.requiredLevel,
+    })
+    .from(userAssessmentDetails)
+    .leftJoin(
+      competencies,
+      eq(userAssessmentDetails.competencyId, competencies.id)
+    )
+    .leftJoin(competencyGroups, eq(competencies.groupId, competencyGroups.id))
+    .leftJoin(
+      competencyRequirements,
+      and(
+        eq(competencyRequirements.competencyId, userAssessmentDetails.competencyId),
+        eq(competencyRequirements.careerBandId, assessment.user.careerBandId!)
+      )
+    )
+    .where(eq(userAssessmentDetails.userAssessmentId, assessment.id))
+
+  // Group by competency group
+  const groupedData: Record<string, any> = {}
+  
+  details.forEach((detail) => {
+    const groupName = detail.group?.name || 'Other'
+    if (!groupedData[groupName]) {
+      groupedData[groupName] = {
+        name: groupName,
+        competencies: [],
+        totalFinalScore: 0,
+        totalRequiredLevel: 0,
+        count: 0,
+      }
+    }
+
+    if (detail.finalScore !== null && detail.requiredLevel !== null) {
+      groupedData[groupName].competencies.push({
+        name: detail.competency?.name || 'Unknown',
+        finalScore: detail.finalScore,
+        requiredLevel: detail.requiredLevel,
+        gap: detail.finalScore - detail.requiredLevel,
+      })
+      groupedData[groupName].totalFinalScore += detail.finalScore
+      groupedData[groupName].totalRequiredLevel += detail.requiredLevel
+      groupedData[groupName].count += 1
+    }
+  })
+
+  // Calculate averages
+  const groups = Object.values(groupedData).map((group: any) => ({
+    name: group.name,
+    avgFinalScore: group.count > 0 ? group.totalFinalScore / group.count : 0,
+    avgRequiredLevel: group.count > 0 ? group.totalRequiredLevel / group.count : 0,
+    competencies: group.competencies,
+  }))
+
+  return {
+    success: true,
+    data: { groups },
+  }
+})
+
+/**
+ * Get Gap Analysis Report
+ * 
+ * @description Comprehensive gap analysis report for Admin/HR.
+ * Provides summary statistics, competency-level breakdown, and employee-level details.
+ * 
+ * **Business Value**:
+ * - Identify organization-wide skill gaps
+ * - Prioritize training investments
+ * - Track competency development trends
+ * 
+ * @param token - JWT authentication token (Admin/HR only)
+ * @param params.teamId - Optional filter by team
+ * @param params.roleId - Optional filter by role
+ * @param params.cycleId - Optional filter by assessment cycle
+ * 
+ * @returns Gap analysis report with summary, by-competency, and by-employee breakdowns
+ */
+export const getGapAnalysisReportFn = createServerFn({
+  method: 'POST',
+}).handler(async (ctx) => {
+  const schema = z.object({
+    token: z.string(),
+    params: z.object({
+      teamId: z.number().int().positive().optional(),
+      roleId: z.number().int().positive().optional(),
+      cycleId: z.number().int().positive().optional(),
+    }).optional(),
+  })
+  const data = schema.parse(ctx.data)
+
+  await verifyAdminOrHR(data.token)
+
+  // Build filters for assessments
+  const assessmentFilters: any[] = [eq(userAssessments.status, 'DONE')]
+  
+  if (data.params?.cycleId) {
+    assessmentFilters.push(eq(userAssessments.cycleId, data.params.cycleId))
+  }
+
+  // Get all completed assessments
+  let assessments = await db.query.userAssessments.findMany({
+    where: and(...assessmentFilters),
+    with: {
+      user: {
+        with: {
+          profile: true,
+          team: true,
+          role: true,
+          careerBand: true,
+        },
+      },
+      cycle: true,
+    },
+  })
+
+  // Apply additional filters
+  if (data.params?.teamId) {
+    assessments = assessments.filter(a => a.user.teamId === data.params.teamId)
+  }
+  if (data.params?.roleId) {
+    assessments = assessments.filter(a => a.user.roleId === data.params.roleId)
+  }
+
+  if (assessments.length === 0) {
+    return {
+      success: true,
+      data: {
+        summary: {
+          totalEmployees: 0,
+          avgGap: 0,
+          meetsRequirementPercent: 0,
+          needsDevelopmentPercent: 0,
+        },
+        byCompetency: [],
+        byEmployee: [],
+      },
+    }
+  }
+
+  // Get all assessment details for these assessments
+  const assessmentIds = assessments.map(a => a.id)
+  const allDetails = await db
+    .select({
+      userAssessmentId: userAssessmentDetails.userAssessmentId,
+      competencyId: userAssessmentDetails.competencyId,
+      finalScore: userAssessmentDetails.finalScore,
+      competency: competencies,
+      requiredLevel: competencyRequirements.requiredLevel,
+    })
+    .from(userAssessmentDetails)
+    .leftJoin(
+      competencies,
+      eq(userAssessmentDetails.competencyId, competencies.id)
+    )
+    .leftJoin(
+      competencyRequirements,
+      eq(competencyRequirements.competencyId, userAssessmentDetails.competencyId)
+    )
+    .where((userAssessmentDetails, { inArray }) =>
+      inArray(userAssessmentDetails.userAssessmentId, assessmentIds)
+    )
+
+  // Calculate summary statistics
+  const gaps = allDetails
+    .filter(d => d.finalScore !== null && d.requiredLevel !== null)
+    .map(d => d.finalScore! - d.requiredLevel!)
+  
+  const avgGap = gaps.length > 0 ? gaps.reduce((a, b) => a + b, 0) / gaps.length : 0
+  const meetsRequirement = gaps.filter(g => g >= 0).length
+  const meetsRequirementPercent = gaps.length > 0 ? (meetsRequirement / gaps.length) * 100 : 0
+  const needsDevelopmentPercent = 100 - meetsRequirementPercent
+
+  // By Competency breakdown
+  const competencyMap: Record<number, any> = {}
+  allDetails.forEach(detail => {
+    if (detail.finalScore === null || detail.requiredLevel === null) return
+
+    const compId = detail.competencyId
+    if (!competencyMap[compId]) {
+      competencyMap[compId] = {
+        competency: detail.competency,
+        gaps: [],
+        employeesBelow: 0,
+      }
+    }
+
+    const gap = detail.finalScore - detail.requiredLevel
+    competencyMap[compId].gaps.push(gap)
+    if (gap < 0) {
+      competencyMap[compId].employeesBelow += 1
+    }
+  })
+
+  const byCompetency = Object.values(competencyMap).map((item: any) => ({
+    competency: item.competency,
+    avgGap: item.gaps.reduce((a: number, b: number) => a + b, 0) / item.gaps.length,
+    employeesBelow: item.employeesBelow,
+    totalAssessed: item.gaps.length,
+  }))
+
+  // By Employee breakdown
+  const byEmployee = assessments.map(assessment => {
+    const employeeDetails = allDetails.filter(
+      d => d.userAssessmentId === assessment.id
+    )
+
+    const employeeGaps = employeeDetails
+      .filter(d => d.finalScore !== null && d.requiredLevel !== null)
+      .map(d => ({
+        competency: d.competency,
+        gap: d.finalScore! - d.requiredLevel!,
+      }))
+
+    const criticalGaps = employeeGaps
+      .filter(g => g.gap <= -2)
+      .map(g => ({
+        competency: g.competency,
+        gap: g.gap,
+      }))
+
+    const avgEmployeeGap = employeeGaps.length > 0
+      ? employeeGaps.reduce((a, b) => a + b.gap, 0) / employeeGaps.length
+      : 0
+
+    return {
+      user: assessment.user,
+      avgGap: avgEmployeeGap,
+      criticalGaps,
+      totalCompetencies: employeeGaps.length,
+    }
+  })
+
+  return {
+    success: true,
+    data: {
+      summary: {
+        totalEmployees: assessments.length,
+        avgGap: Number(avgGap.toFixed(2)),
+        meetsRequirementPercent: Number(meetsRequirementPercent.toFixed(1)),
+        needsDevelopmentPercent: Number(needsDevelopmentPercent.toFixed(1)),
+      },
+      byCompetency: byCompetency.sort((a, b) => a.avgGap - b.avgGap),
+      byEmployee: byEmployee.sort((a, b) => a.avgGap - b.avgGap),
+    },
+  }
+})
