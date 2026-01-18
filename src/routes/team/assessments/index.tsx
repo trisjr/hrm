@@ -150,8 +150,8 @@ function TeamAssessmentsPage() {
         return (
           <Button variant="outline" size="sm" asChild>
              <Link
-              to="/trainings/idp/create" // Placeholder: Should link to view result or create IDP
-              search={{ assessmentId: assessment.id }}
+              to="/competencies/assessments/$assessmentId"
+              params={{ assessmentId: assessment.id.toString() }}
             >
               <IconEye className="h-4 w-4 mr-2" />
               View Result

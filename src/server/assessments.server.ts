@@ -20,7 +20,10 @@ import {
   userAssessmentDetails,
   userAssessments,
   users,
+  emailTemplates,
+  emailLogs,
 } from '@/db/schema'
+import { replacePlaceholders, sendEmail } from '@/lib/email.utils'
 import { verifyToken } from '@/lib/auth.utils'
 
 // ==================== HELPER FUNCTIONS ====================
@@ -1727,5 +1730,85 @@ export const getTeamAssessmentsFn = createServerFn({
   return {
     success: true,
     data: assessments,
+  }
+})
+
+/**
+ * Remind Pending Assessments
+ * Sends email reminder to all participants with status SELF_ASSESSING
+ */
+export const remindPendingAssessmentsFn = createServerFn({
+  method: 'POST',
+}).handler(async (ctx) => {
+  const schema = z.object({
+    token: z.string(),
+    data: z.object({
+      cycleId: z.number(),
+    }),
+  })
+  const input = schema.parse(ctx.data)
+  const requester = await verifyAdminOrHR(input.token)
+  const { cycleId } = input.data
+
+  const cycle = await db.query.assessmentCycles.findFirst({where: eq(assessmentCycles.id, cycleId)})
+
+  // Fetch pending self-assessments
+  const pending = await db.query.userAssessments.findMany({
+    where: and(
+        eq(userAssessments.cycleId, cycleId),
+        eq(userAssessments.status, 'SELF_ASSESSING')
+    ),
+    with: {
+      user: {
+        with: { profile: true }
+      }
+    }
+  })
+
+  // Fetch Template
+  const template = await db.query.emailTemplates.findFirst({
+      where: eq(emailTemplates.code, 'ASSESSMENT_REMINDER')
+  })
+  
+  let emailsSent = 0
+  if (template) {
+    for (const p of pending) {
+        const recipientEmail = p.user.email
+        const recipientName = p.user.profile?.fullName || 'Employee'
+        
+        const subject = replacePlaceholders(template.subject, { 
+            cycleName: cycle?.name || 'Assessment Cycle',
+            fullName: recipientName
+        })
+        const body = replacePlaceholders(template.body, {
+            cycleName: cycle?.name || 'Assessment Cycle',
+            daysLeft: "some", // Calculation logic can be added
+            link: `${process.env.APP_URL || 'http://localhost:3000'}/competencies/my-assessment`,
+            fullName: recipientName
+        })
+
+        try {
+        const res = await sendEmail(recipientEmail, subject, body)
+        if (res.success) {
+            await db.insert(emailLogs).values({
+                templateId: template.id,
+                senderId: requester.id,
+                recipientEmail,
+                subject,
+                body,
+                status: 'SENT',
+                sentAt: new Date(),
+            })
+            emailsSent++
+        }
+        } catch (e) {
+            console.error(`Failed to send email to ${recipientEmail}`, e)
+        }
+    }
+  }
+
+  return {
+    success: true,
+    message: `Sent reminders to ${emailsSent} employees.`,
   }
 })

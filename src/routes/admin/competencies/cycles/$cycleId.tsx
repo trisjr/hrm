@@ -1,8 +1,14 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/auth.store'
-import { getAssessmentCycleByIdFn } from '@/server/competencies.server'
-import { getAssessmentsByCycleFn } from '@/server/assessments.server'
+import {
+  getAssessmentCycleByIdFn,
+  updateAssessmentCycleStatusFn,
+} from '@/server/competencies.server'
+import {
+  getAssessmentsByCycleFn,
+  remindPendingAssessmentsFn,
+} from '@/server/assessments.server'
 import {
   IconArrowLeft,
   IconCalendar,
@@ -11,6 +17,8 @@ import {
   IconLoader2,
   IconMail,
   IconMessage,
+  IconPlayerPlay,
+  IconPlayerStop,
   IconUser,
   IconUsers,
 } from '@tabler/icons-react'
@@ -38,6 +46,8 @@ function CycleDetailComponent() {
   const { cycleId } = Route.useParams()
   const token = useAuthStore((state: any) => state.token)
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+
 
   // Fetch Cycle Details
   const { data: cycleData, isLoading: isCycleLoading } = useQuery({
@@ -57,28 +67,60 @@ function CycleDetailComponent() {
       } as any),
   })
 
+  const updateStatusMutation = useMutation({
+    mutationFn: async (status: 'ACTIVE' | 'COMPLETED') => {
+      await updateAssessmentCycleStatusFn({
+        data: { token: token!, data: { cycleId: Number(cycleId), status } },
+      } as any)
+    },
+    onSuccess: (_, status) => {
+      toast.success(`Cycle ${status === 'ACTIVE' ? 'activated' : 'completed'} successfully`)
+      queryClient.invalidateQueries({ queryKey: ['assessment-cycle', cycleId] })
+      queryClient.invalidateQueries({ queryKey: ['assessment-cycles-list'] })
+    },
+    onError: (err: any) => toast.error(err.message),
+  })
+
+  const reminderMutation = useMutation({
+    mutationFn: async () => {
+      await remindPendingAssessmentsFn({
+        data: { token: token!, data: { cycleId: Number(cycleId) } },
+      } as any)
+    },
+    onSuccess: (res: any) => {
+      toast.success(res.message || 'Reminders sent')
+    },
+    onError: (err: any) => toast.error(err.message),
+  })
+
   const isLoading = isCycleLoading || isAssessmentsLoading
   const cycle = cycleData?.data
   const assessments = assessmentsData?.data || []
 
-  // Calculate Statistics
+  // ... (stats calculation)
   const total = assessments.length
   const completed = assessments.filter((a: any) => a.status === 'DONE').length
-  const discussion = assessments.filter((a: any) => a.status === 'DISCUSSION')
-    .length
-  const leaderReview = assessments.filter(
-    (a: any) => a.status === 'LEADER_ASSESSING',
-  ).length
-  const selfReview = assessments.filter(
-    (a: any) => a.status === 'SELF_ASSESSING',
-  ).length
-
+  const discussion = assessments.filter((a: any) => a.status === 'DISCUSSION').length
+  const leaderReview = assessments.filter((a: any) => a.status === 'LEADER_ASSESSING').length
+  const selfReview = assessments.filter((a: any) => a.status === 'SELF_ASSESSING').length
   const progress = total > 0 ? (completed / total) * 100 : 0
-
+  
   const handleRemindAll = () => {
-    toast.success('Reminders scheduled', {
-      description: 'Emails sent to 5 employees who haven\'t started yet.',
-    })
+    if (confirm('Send email reminders to all employees who have not completed self-assessment?')) {
+        reminderMutation.mutate()
+    }
+  }
+
+  const handleActivate = () => {
+      if (confirm('Activate this cycle? Emails will be sent to all participants.')) {
+          updateStatusMutation.mutate('ACTIVE')
+      }
+  }
+
+  const handleClose = () => {
+      if (confirm('Close this cycle? No further assessments can be submitted.')) {
+          updateStatusMutation.mutate('COMPLETED')
+      }
   }
 
   const handleRemindUser = (name: string) => {
@@ -136,10 +178,24 @@ function CycleDetailComponent() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={handleRemindAll}>
-              <IconMail className="mr-2 h-4 w-4" />
-              Remind All Pending
-            </Button>
+            {cycle?.status === 'DRAFT' && (
+                <Button variant="outline" className="text-green-600 border-green-200 hover:bg-green-50" onClick={handleActivate}>
+                    <IconPlayerPlay className="mr-2 h-4 w-4" /> Activate Cycle
+                </Button>
+            )}
+            {cycle?.status === 'ACTIVE' && (
+                <>
+                  <Button variant="outline" onClick={() => handleRemindAll()}>
+                      <IconMail className="mr-2 h-4 w-4" /> Remind All Pending
+                  </Button>
+                  <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={handleClose}>
+                      <IconPlayerStop className="mr-2 h-4 w-4" /> Close Cycle
+                  </Button>
+                </>
+            )}
+            {cycle?.status === 'COMPLETED' && (
+                <Badge variant="secondary">Archived</Badge>
+            )}
           </div>
         </div>
       </div>

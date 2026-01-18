@@ -2,11 +2,13 @@ import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
+import { Link } from '@tanstack/react-router'
 import {
   IconCheck,
   IconLoader2,
   IconSend,
   IconAlertTriangle,
+  IconListCheck,
 } from '@tabler/icons-react'
 import { AssessmentForm } from './assessment-form'
 import { Button } from '@/components/ui/button'
@@ -152,15 +154,15 @@ export function AssessmentDetail({
             </div>
             {/* Legend for scores OR View Results button */}
              {assessment.status === 'DONE' ? (
-                 <Button 
-                   onClick={() => {
-                     // Navigate to results page
-                     window.location.href = `/competencies/results/${assessment.id}`
-                   }}
-                   className="flex items-center gap-2"
-                 >
-                   <IconCheck className="h-4 w-4" />
-                   View Results & Gap Analysis
+                 <Button variant="outline" asChild>
+                   <Link 
+                     to="/competencies/idp/create" 
+                     search={{ assessmentId: assessment.id }}
+                     className="flex items-center gap-2"
+                   >
+                     <IconListCheck className="h-4 w-4" />
+                     Create Development Plan
+                   </Link>
                  </Button>
              ) : (mode === 'LEADER' || mode === 'DISCUSSION') && (
                  <div className="bg-muted p-3 rounded-md text-xs space-y-1">

@@ -18,7 +18,8 @@ import {
   listAssessmentCyclesParamsSchema,
 } from '@/lib/competency.schemas'
 import { db } from '@/db'
-import { competencyGroups, competencies, competencyLevels, users, assessmentCycles, userAssessments } from '@/db/schema'
+import { competencyGroups, competencies, competencyLevels, users, assessmentCycles, userAssessments, emailTemplates, emailLogs, profiles } from '@/db/schema'
+import { replacePlaceholders, sendEmail } from '@/lib/email.utils'
 import { verifyToken } from '@/lib/auth.utils'
 
 // ==================== HELPER FUNCTIONS ====================
@@ -1014,4 +1015,100 @@ export const getActiveAssessmentCycleFn = createServerFn({
     orderBy: [desc(assessmentCycles.startDate)], 
   })
   return { success: true, data: activeCycle || null }
+})
+
+/**
+ * Update Assessment Cycle Status
+ * - ACTIVE: Sends welcome emails to all participants
+ * - COMPLETED: Closes the cycle
+ */
+export const updateAssessmentCycleStatusFn = createServerFn({
+  method: 'POST',
+}).handler(async (ctx) => {
+  const schema = z.object({
+    token: z.string(),
+    data: z.object({
+      cycleId: z.number(),
+      status: z.enum(['ACTIVE', 'COMPLETED', 'DRAFT']), // Added DRAFT just in case rollback
+    }),
+  })
+  const input = schema.parse(ctx.data)
+  const requester = await verifyAdminOrHR(input.token)
+
+  const { cycleId, status } = input.data
+
+  const cycle = await db.query.assessmentCycles.findFirst({
+    where: eq(assessmentCycles.id, cycleId),
+  })
+
+  if (!cycle) {
+    throw new Error('AssessmentCycle not found')
+  }
+
+  // Update Status
+  await db
+    .update(assessmentCycles)
+    .set({ status })
+    .where(eq(assessmentCycles.id, cycleId))
+
+  // If activating, send emails
+  let emailsSent = 0
+  if (status === 'ACTIVE') {
+    // Fetch participants
+    const participants = await db.query.userAssessments.findMany({
+        where: eq(userAssessments.cycleId, cycleId),
+        with: {
+            user: {
+                with: { profile: true }
+            }
+        }
+    })
+
+    // Fetch Template
+    const template = await db.query.emailTemplates.findFirst({
+        where: eq(emailTemplates.code, 'ASSESSMENT_CYCLE_STARTED')
+    })
+    
+    if (template) {
+        // Send emails sequentially to avoid overwhelming SMTP
+        for (const p of participants) {
+             const recipientEmail = p.user.email
+             const recipientName = p.user.profile?.fullName || 'Employee'
+             
+             const subject = replacePlaceholders(template.subject, { 
+                 cycleName: cycle.name,
+                 fullName: recipientName
+             })
+             const body = replacePlaceholders(template.body, {
+                 cycleName: cycle.name,
+                 endDate: new Date(cycle.endDate).toLocaleDateString(),
+                 link: `${process.env.APP_URL || 'http://localhost:3000'}/competencies/my-assessment`,
+                 fullName: recipientName
+             })
+
+             try {
+                const res = await sendEmail(recipientEmail, subject, body)
+                if (res.success) {
+                    await db.insert(emailLogs).values({
+                        templateId: template.id,
+                        senderId: requester.id,
+                        recipientEmail,
+                        subject,
+                        body,
+                        status: 'SENT',
+                        sentAt: new Date(),
+                    })
+                    emailsSent++
+                }
+             } catch (e) {
+                 console.error(`Failed to send email to ${recipientEmail}`, e)
+             }
+        }
+    }
+  }
+
+  return {
+    success: true,
+    message: `Cycle updated to ${status}. ${emailsSent > 0 ? `Sent ${emailsSent} emails.` : ''}`,
+  }
 })
