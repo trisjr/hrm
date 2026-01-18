@@ -93,3 +93,49 @@ This document describes the server functions (APIs) available for managing teams
   - `token`: string
   - `params?`: `{ startDate, endDate }`
 - **Response:** `{ totalTeams, avgTeamSize, teamsWithoutLeader, teamSizeDistribution[], requestApprovalRates[] }`
+
+---
+
+## 4. Competency Operations
+
+### `updateAssessmentCycleStatusFn` (POST)
+
+- **Description:** Updates cycle status (ACTIVE/COMPLETED/DRAFT) and triggers automated emails.
+- **Input:**
+  - `token`: string
+  - `data`: `{ cycleId, status: 'ACTIVE'|'COMPLETED'|'DRAFT' }`
+- **Logic:**
+  - If status becomes `ACTIVE`: Sends `ASSESSMENT_CYCLE_STARTED` emails to all participants.
+- **Response:** `{ success: true, message: string }`
+
+### `remindPendingAssessmentsFn` (POST)
+
+- **Description:** Sends reminder emails to participants with incomplete assessments.
+- **Input:**
+  - `token`: string
+  - `data`: `{ cycleId }`
+- **Logic:** filters `userAssessments` where status != 'DONE' and sends `ASSESSMENT_REMINDER` email.
+- **Response:** `{ success: true, sentCount: number }`
+
+### `getTeamIDPsFn` (POST)
+
+- **Description:** (Leader) Retrieves list of Team Members' IDPs with progress stats.
+- **Input:**
+  - `token`: string
+- **Response:** `{ success: true, data: IDP[] }`
+
+### `getIDPByIdFn` (POST)
+
+- **Description:** Retrieves detailed IDP information. Enforces Ownership or Leader access.
+- **Input:**
+  - `token`: string
+  - `data`: `{ idpId }`
+- **Validation:** Throws if requester is NOT owner AND NOT leader.
+- **Response:** `{ success: true, data: IDP }`
+
+### `getMyAssessmentsHistoryFn` (POST)
+
+- **Description:** Retrieves all historical assessments for the current user.
+- **Input:**
+  - `token`: string
+- **Response:** `{ success: true, data: Assessment[] }`

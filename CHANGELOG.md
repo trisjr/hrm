@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026-01-19]
+
+### Added
+
+- **Competency Operations - Phase 8: Cycle & Team Management**:
+  - **Assessment Cycle Operations**:
+    - **Lifecycle Management**: Admin can now Activate and Close cycles via UI.
+    - **Automated Emails**: System sends 'Cycle Started' emails to all participants upon activation.
+    - **Reminder System**: 'Remind All Pending' action sends nudge emails to employees who haven't completed assessments.
+  - **Leader Dashboard (Team IDP)**:
+    - **Team Development Plans**: New dashboard for Leaders to monitor team member's IDP progress.
+    - **Progress Tracking**: Visual progress bars and status indicators for team development activities.
+    - **Detail View**: Read-only view for Leaders to inspect specific IDP contents and evidence.
+    - **Notifications**: Leaders receive email alerts when employees submit Self-Assessments.
+  - **Assessment History**:
+    - **History Page**: User-facing page listing all past assessments with scores and status.
+    - **Smart Navigation**: 'My Assessment' page now intelligently redirects users to history or active tasks, avoiding "looping" on completed tasks.
+  - **System & Security**:
+    - **Email Seeder**: Script (`src/scripts/seed-assessment-templates.ts`) to populate essential email templates.
+    - **Permission Hardening**: Strict RBAC checks update for Cycle and IDP access (Leader/Owner only).
+
 ## [2026-01-16]
 
 ### Added

@@ -212,6 +212,25 @@ if (gap > 0)   → Strength (exceeds requirement)
 avgGap = sum(gaps) / count(competencies)
 ```
 
+### 5. Operational Communication Flow (Email System)
+
+```
+Event: Assessment Cycle Activation
+    └─► Trigger: Admin clicks "Activate"
+        └─► System: Finds all cycle participants
+            └─► Action: Sends "Cycle Started" email with deep link
+
+Event: Assessment Reminder
+    └─► Trigger: Admin clicks "Remind Pending"
+        └─► System: Finds users with status != DONE
+            └─► Action: Sends "Action Required" email
+
+Event: Self-Assessment Submission
+    └─► Trigger: Employee clicks "Submit"
+        └─► System: Finds Employee's Team Leader
+            └─► Action: Sends "Assessment Submitted" email to Leader
+```
+
 ---
 
 ## Security Model
