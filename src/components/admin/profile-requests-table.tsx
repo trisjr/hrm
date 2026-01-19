@@ -26,14 +26,13 @@ interface ProfileUpdateRequest {
   user: {
     employeeCode: string
     email: string
-    profile: {
-      fullName: string
-    } | null
+    profile: any | null
     role: {
       roleName: string
     } | null
   }
   dataChanges: Record<string, any>
+  previousData?: Record<string, any> | null
 }
 
 interface ProfileRequestsTableProps {
@@ -105,7 +104,14 @@ export function ProfileRequestsTable({ data }: ProfileRequestsTableProps) {
                 <TableCell>{req.user.role?.roleName}</TableCell>
                 <TableCell>
                   <span className="text-xs text-muted-foreground">
-                    {Object.keys(req.dataChanges).length} field(s)
+                    {
+                      Object.entries(req.dataChanges).filter(([key, newValue]) => {
+                        const oldValue = req.previousData
+                          ? req.previousData[key]
+                          : req.user.profile?.[key]
+                        return String(oldValue ?? '') !== String(newValue ?? '')
+                      }).length
+                    } field(s)
                   </span>
                 </TableCell>
                 <TableCell>{getStatusBadge(req.status)}</TableCell>
