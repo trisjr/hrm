@@ -812,3 +812,13 @@ export const profileUpdateRequestsRelations = relations(
     }),
   }),
 )
+
+// --- 2.9 Public Holidays ---
+export const publicHolidays = pgTable('public_holidays', {
+  id: serial('id').primaryKey(),
+  date: date('date').notNull().unique(),
+  name: varchar('name', { length: 255 }).notNull(),
+  country: varchar('country', { length: 2 }).default('VN'),
+  isRecurring: boolean('is_recurring').default(false),
+  createdAt: timestamp('created_at').defaultNow(),
+})

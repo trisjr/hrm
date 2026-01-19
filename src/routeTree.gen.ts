@@ -14,6 +14,7 @@ import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ChangePasswordRouteImport } from './routes/change-password'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TimesheetIndexRouteImport } from './routes/timesheet/index'
 import { Route as RequestsIndexRouteImport } from './routes/requests/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as TeamIdpIndexRouteImport } from './routes/team/idp/index'
@@ -62,6 +63,11 @@ const ChangePasswordRoute = ChangePasswordRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TimesheetIndexRoute = TimesheetIndexRouteImport.update({
+  id: '/timesheet/',
+  path: '/timesheet/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RequestsIndexRoute = RequestsIndexRouteImport.update({
@@ -204,6 +210,7 @@ export interface FileRoutesByFullPath {
   '/verify': typeof VerifyRoute
   '/admin': typeof AdminIndexRoute
   '/requests': typeof RequestsIndexRoute
+  '/timesheet': typeof TimesheetIndexRoute
   '/admin/competencies/analytics': typeof AdminCompetenciesAnalyticsRoute
   '/admin/teams/$teamId': typeof AdminTeamsTeamIdRoute
   '/admin/teams/analytics': typeof AdminTeamsAnalyticsRoute
@@ -235,6 +242,7 @@ export interface FileRoutesByTo {
   '/verify': typeof VerifyRoute
   '/admin': typeof AdminIndexRoute
   '/requests': typeof RequestsIndexRoute
+  '/timesheet': typeof TimesheetIndexRoute
   '/admin/competencies/analytics': typeof AdminCompetenciesAnalyticsRoute
   '/admin/teams/$teamId': typeof AdminTeamsTeamIdRoute
   '/admin/teams/analytics': typeof AdminTeamsAnalyticsRoute
@@ -267,6 +275,7 @@ export interface FileRoutesById {
   '/verify': typeof VerifyRoute
   '/admin/': typeof AdminIndexRoute
   '/requests/': typeof RequestsIndexRoute
+  '/timesheet/': typeof TimesheetIndexRoute
   '/admin/competencies/analytics': typeof AdminCompetenciesAnalyticsRoute
   '/admin/teams/$teamId': typeof AdminTeamsTeamIdRoute
   '/admin/teams/analytics': typeof AdminTeamsAnalyticsRoute
@@ -300,6 +309,7 @@ export interface FileRouteTypes {
     | '/verify'
     | '/admin'
     | '/requests'
+    | '/timesheet'
     | '/admin/competencies/analytics'
     | '/admin/teams/$teamId'
     | '/admin/teams/analytics'
@@ -331,6 +341,7 @@ export interface FileRouteTypes {
     | '/verify'
     | '/admin'
     | '/requests'
+    | '/timesheet'
     | '/admin/competencies/analytics'
     | '/admin/teams/$teamId'
     | '/admin/teams/analytics'
@@ -362,6 +373,7 @@ export interface FileRouteTypes {
     | '/verify'
     | '/admin/'
     | '/requests/'
+    | '/timesheet/'
     | '/admin/competencies/analytics'
     | '/admin/teams/$teamId'
     | '/admin/teams/analytics'
@@ -394,6 +406,7 @@ export interface RootRouteChildren {
   VerifyRoute: typeof VerifyRoute
   AdminIndexRoute: typeof AdminIndexRoute
   RequestsIndexRoute: typeof RequestsIndexRoute
+  TimesheetIndexRoute: typeof TimesheetIndexRoute
   AdminCompetenciesAnalyticsRoute: typeof AdminCompetenciesAnalyticsRoute
   AdminTeamsTeamIdRoute: typeof AdminTeamsTeamIdRoute
   AdminTeamsAnalyticsRoute: typeof AdminTeamsAnalyticsRoute
@@ -453,6 +466,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/timesheet/': {
+      id: '/timesheet/'
+      path: '/timesheet'
+      fullPath: '/timesheet'
+      preLoaderRoute: typeof TimesheetIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/requests/': {
@@ -634,6 +654,7 @@ const rootRouteChildren: RootRouteChildren = {
   VerifyRoute: VerifyRoute,
   AdminIndexRoute: AdminIndexRoute,
   RequestsIndexRoute: RequestsIndexRoute,
+  TimesheetIndexRoute: TimesheetIndexRoute,
   AdminCompetenciesAnalyticsRoute: AdminCompetenciesAnalyticsRoute,
   AdminTeamsTeamIdRoute: AdminTeamsTeamIdRoute,
   AdminTeamsAnalyticsRoute: AdminTeamsAnalyticsRoute,
