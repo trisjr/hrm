@@ -16,6 +16,7 @@ import { Route as ChangePasswordRouteImport } from './routes/change-password'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TimesheetIndexRouteImport } from './routes/timesheet/index'
 import { Route as RequestsIndexRouteImport } from './routes/requests/index'
+import { Route as MyCvIndexRouteImport } from './routes/my-cv/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as TeamIdpIndexRouteImport } from './routes/team/idp/index'
 import { Route as TeamAssessmentsIndexRouteImport } from './routes/team/assessments/index'
@@ -74,6 +75,11 @@ const TimesheetIndexRoute = TimesheetIndexRouteImport.update({
 const RequestsIndexRoute = RequestsIndexRouteImport.update({
   id: '/requests/',
   path: '/requests/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MyCvIndexRoute = MyCvIndexRouteImport.update({
+  id: '/my-cv/',
+  path: '/my-cv/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
@@ -216,6 +222,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/verify': typeof VerifyRoute
   '/admin': typeof AdminIndexRoute
+  '/my-cv': typeof MyCvIndexRoute
   '/requests': typeof RequestsIndexRoute
   '/timesheet': typeof TimesheetIndexRoute
   '/admin/competencies/analytics': typeof AdminCompetenciesAnalyticsRoute
@@ -249,6 +256,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/verify': typeof VerifyRoute
   '/admin': typeof AdminIndexRoute
+  '/my-cv': typeof MyCvIndexRoute
   '/requests': typeof RequestsIndexRoute
   '/timesheet': typeof TimesheetIndexRoute
   '/admin/competencies/analytics': typeof AdminCompetenciesAnalyticsRoute
@@ -283,6 +291,7 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/verify': typeof VerifyRoute
   '/admin/': typeof AdminIndexRoute
+  '/my-cv/': typeof MyCvIndexRoute
   '/requests/': typeof RequestsIndexRoute
   '/timesheet/': typeof TimesheetIndexRoute
   '/admin/competencies/analytics': typeof AdminCompetenciesAnalyticsRoute
@@ -318,6 +327,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/verify'
     | '/admin'
+    | '/my-cv'
     | '/requests'
     | '/timesheet'
     | '/admin/competencies/analytics'
@@ -351,6 +361,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/verify'
     | '/admin'
+    | '/my-cv'
     | '/requests'
     | '/timesheet'
     | '/admin/competencies/analytics'
@@ -384,6 +395,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/verify'
     | '/admin/'
+    | '/my-cv/'
     | '/requests/'
     | '/timesheet/'
     | '/admin/competencies/analytics'
@@ -418,6 +430,7 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   VerifyRoute: typeof VerifyRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  MyCvIndexRoute: typeof MyCvIndexRoute
   RequestsIndexRoute: typeof RequestsIndexRoute
   TimesheetIndexRoute: typeof TimesheetIndexRoute
   AdminCompetenciesAnalyticsRoute: typeof AdminCompetenciesAnalyticsRoute
@@ -494,6 +507,13 @@ declare module '@tanstack/react-router' {
       path: '/requests'
       fullPath: '/requests'
       preLoaderRoute: typeof RequestsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/my-cv/': {
+      id: '/my-cv/'
+      path: '/my-cv'
+      fullPath: '/my-cv'
+      preLoaderRoute: typeof MyCvIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/': {
@@ -674,6 +694,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   VerifyRoute: VerifyRoute,
   AdminIndexRoute: AdminIndexRoute,
+  MyCvIndexRoute: MyCvIndexRoute,
   RequestsIndexRoute: RequestsIndexRoute,
   TimesheetIndexRoute: TimesheetIndexRoute,
   AdminCompetenciesAnalyticsRoute: AdminCompetenciesAnalyticsRoute,

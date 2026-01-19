@@ -262,6 +262,7 @@ export const profiles = pgTable('profiles', {
   unionJoinDate: date('union_join_date'),
   unionPosition: varchar('union_position', { length: 100 }),
   avatarUrl: varchar('avatar_url', { length: 500 }),
+  summary: text('summary'), // Professional summary for CV
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
   deletedAt: timestamp('deleted_at'),

@@ -82,6 +82,12 @@ const ALL_MENU_ITEMS: Array<MenuItem> = [
     roles: ['ADMIN', 'HR', 'LEADER', 'DEV'],
   },
   {
+    title: 'My CV',
+    url: '/my-cv',
+    icon: IconFileText,
+    roles: ['ADMIN', 'HR', 'LEADER', 'DEV'],
+  },
+  {
     title: 'Competency Mgmt',
     url: '/admin/competencies',
     icon: IconTarget,
