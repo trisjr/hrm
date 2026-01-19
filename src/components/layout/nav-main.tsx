@@ -13,6 +13,7 @@ import {
   IconUsers,
   IconUsersGroup,
   IconNotes,
+  IconCertificate,
 } from '@tabler/icons-react'
 import { useLocation, useNavigate } from '@tanstack/react-router'
 import {
@@ -72,6 +73,12 @@ const ALL_MENU_ITEMS: Array<MenuItem> = [
     title: 'My IDP',
     url: '/competencies/idp',
     icon: IconChartBar,
+    roles: ['ADMIN', 'HR', 'LEADER', 'DEV'],
+  },
+  {
+    title: 'My Skills',
+    url: '/competencies/my-skills',
+    icon: IconCertificate,
     roles: ['ADMIN', 'HR', 'LEADER', 'DEV'],
   },
   {

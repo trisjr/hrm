@@ -19,6 +19,7 @@ import { Route as RequestsIndexRouteImport } from './routes/requests/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as TeamIdpIndexRouteImport } from './routes/team/idp/index'
 import { Route as TeamAssessmentsIndexRouteImport } from './routes/team/assessments/index'
+import { Route as CompetenciesMySkillsIndexRouteImport } from './routes/competencies/my-skills/index'
 import { Route as CompetenciesMyAssessmentIndexRouteImport } from './routes/competencies/my-assessment/index'
 import { Route as CompetenciesIdpIndexRouteImport } from './routes/competencies/idp/index'
 import { Route as CompetenciesAssessmentsIndexRouteImport } from './routes/competencies/assessments/index'
@@ -90,6 +91,12 @@ const TeamAssessmentsIndexRoute = TeamAssessmentsIndexRouteImport.update({
   path: '/team/assessments/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CompetenciesMySkillsIndexRoute =
+  CompetenciesMySkillsIndexRouteImport.update({
+    id: '/competencies/my-skills/',
+    path: '/competencies/my-skills/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const CompetenciesMyAssessmentIndexRoute =
   CompetenciesMyAssessmentIndexRouteImport.update({
     id: '/competencies/my-assessment/',
@@ -228,6 +235,7 @@ export interface FileRoutesByFullPath {
   '/competencies/assessments': typeof CompetenciesAssessmentsIndexRoute
   '/competencies/idp': typeof CompetenciesIdpIndexRoute
   '/competencies/my-assessment': typeof CompetenciesMyAssessmentIndexRoute
+  '/competencies/my-skills': typeof CompetenciesMySkillsIndexRoute
   '/team/assessments': typeof TeamAssessmentsIndexRoute
   '/team/idp': typeof TeamIdpIndexRoute
   '/admin/competencies/cycles/$cycleId': typeof AdminCompetenciesCyclesCycleIdRoute
@@ -260,6 +268,7 @@ export interface FileRoutesByTo {
   '/competencies/assessments': typeof CompetenciesAssessmentsIndexRoute
   '/competencies/idp': typeof CompetenciesIdpIndexRoute
   '/competencies/my-assessment': typeof CompetenciesMyAssessmentIndexRoute
+  '/competencies/my-skills': typeof CompetenciesMySkillsIndexRoute
   '/team/assessments': typeof TeamAssessmentsIndexRoute
   '/team/idp': typeof TeamIdpIndexRoute
   '/admin/competencies/cycles/$cycleId': typeof AdminCompetenciesCyclesCycleIdRoute
@@ -293,6 +302,7 @@ export interface FileRoutesById {
   '/competencies/assessments/': typeof CompetenciesAssessmentsIndexRoute
   '/competencies/idp/': typeof CompetenciesIdpIndexRoute
   '/competencies/my-assessment/': typeof CompetenciesMyAssessmentIndexRoute
+  '/competencies/my-skills/': typeof CompetenciesMySkillsIndexRoute
   '/team/assessments/': typeof TeamAssessmentsIndexRoute
   '/team/idp/': typeof TeamIdpIndexRoute
   '/admin/competencies/cycles/$cycleId': typeof AdminCompetenciesCyclesCycleIdRoute
@@ -327,6 +337,7 @@ export interface FileRouteTypes {
     | '/competencies/assessments'
     | '/competencies/idp'
     | '/competencies/my-assessment'
+    | '/competencies/my-skills'
     | '/team/assessments'
     | '/team/idp'
     | '/admin/competencies/cycles/$cycleId'
@@ -359,6 +370,7 @@ export interface FileRouteTypes {
     | '/competencies/assessments'
     | '/competencies/idp'
     | '/competencies/my-assessment'
+    | '/competencies/my-skills'
     | '/team/assessments'
     | '/team/idp'
     | '/admin/competencies/cycles/$cycleId'
@@ -391,6 +403,7 @@ export interface FileRouteTypes {
     | '/competencies/assessments/'
     | '/competencies/idp/'
     | '/competencies/my-assessment/'
+    | '/competencies/my-skills/'
     | '/team/assessments/'
     | '/team/idp/'
     | '/admin/competencies/cycles/$cycleId'
@@ -424,6 +437,7 @@ export interface RootRouteChildren {
   CompetenciesAssessmentsIndexRoute: typeof CompetenciesAssessmentsIndexRoute
   CompetenciesIdpIndexRoute: typeof CompetenciesIdpIndexRoute
   CompetenciesMyAssessmentIndexRoute: typeof CompetenciesMyAssessmentIndexRoute
+  CompetenciesMySkillsIndexRoute: typeof CompetenciesMySkillsIndexRoute
   TeamAssessmentsIndexRoute: typeof TeamAssessmentsIndexRoute
   TeamIdpIndexRoute: typeof TeamIdpIndexRoute
   AdminCompetenciesCyclesCycleIdRoute: typeof AdminCompetenciesCyclesCycleIdRoute
@@ -501,6 +515,13 @@ declare module '@tanstack/react-router' {
       path: '/team/assessments'
       fullPath: '/team/assessments'
       preLoaderRoute: typeof TeamAssessmentsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/competencies/my-skills/': {
+      id: '/competencies/my-skills/'
+      path: '/competencies/my-skills'
+      fullPath: '/competencies/my-skills'
+      preLoaderRoute: typeof CompetenciesMySkillsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/competencies/my-assessment/': {
@@ -673,6 +694,7 @@ const rootRouteChildren: RootRouteChildren = {
   CompetenciesAssessmentsIndexRoute: CompetenciesAssessmentsIndexRoute,
   CompetenciesIdpIndexRoute: CompetenciesIdpIndexRoute,
   CompetenciesMyAssessmentIndexRoute: CompetenciesMyAssessmentIndexRoute,
+  CompetenciesMySkillsIndexRoute: CompetenciesMySkillsIndexRoute,
   TeamAssessmentsIndexRoute: TeamAssessmentsIndexRoute,
   TeamIdpIndexRoute: TeamIdpIndexRoute,
   AdminCompetenciesCyclesCycleIdRoute: AdminCompetenciesCyclesCycleIdRoute,
