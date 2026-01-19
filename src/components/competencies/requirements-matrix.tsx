@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/table'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
 import { RequirementsMatrixCell } from './requirements-matrix-cell'
 import { IconChevronDown, IconChevronRight } from '@tabler/icons-react'
 
@@ -46,12 +47,20 @@ interface RequirementsMatrixProps {
     competencyId: number,
     requiredLevel: number | null,
   ) => Promise<void>
+  isLoading?: boolean
 }
 
+/**
+ * Matrix component for setting competency requirements
+ * Rows: Competencies (grouped)
+ * Columns: Career Bands
+ * Cells: Editable Level Input (1-5)
+ */
 export function RequirementsMatrix({
   careerBands,
   groups,
   onUpdateRequirement,
+  isLoading = false,
 }: RequirementsMatrixProps) {
   const [expandedGroups, setExpandedGroups] = useState<Set<number>>(
     new Set(groups.map((g) => g.group.id)),
@@ -73,6 +82,23 @@ export function RequirementsMatrix({
     competencyId: number,
   ): number | null => {
     return requirementsMap[careerBandId]?.[competencyId] ?? null
+  }
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Card key={i}>
+            <CardHeader>
+              <Skeleton className="h-6 w-1/3" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-32 w-full" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    )
   }
 
   if (careerBands.length === 0) {

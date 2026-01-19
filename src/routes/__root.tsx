@@ -1,13 +1,13 @@
 import {
-  HeadContent,
-  Scripts,
   createRootRouteWithContext,
-  useRouter,
+  HeadContent,
   Outlet,
+  Scripts,
+  useRouter,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
-import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import * as React from 'react'
 
 import appCss from '../styles.css?url'
@@ -17,7 +17,14 @@ import { useAuthStore } from '@/store/auth.store'
 import { validateTokenFn } from '@/server/validate-token.server'
 import { NotFound } from '@/components/not-found'
 
-const publicPaths = ['/login', '/register', '/change-password', '/mailbox', '/verify', '/privacy-policy']
+const publicPaths = [
+  '/login',
+  '/register',
+  '/change-password',
+  '/mailbox',
+  '/verify',
+  '/privacy-policy',
+]
 
 interface MyRouterContext {
   queryClient: QueryClient
@@ -107,7 +114,7 @@ function RootDocument() {
 
     // Redirect unauthenticated users from protected routes
     if (!isAuthenticated && !isPublicPath) {
-      router.navigate({ to: '/login' })
+      window.location.href = '/login'
       return
     }
 
@@ -153,7 +160,13 @@ function RootDocument() {
       </head>
       <body>
         <QueryClientProvider client={queryClient}>
-          {isPublicPath ? <Outlet /> : <AdminLayout><Outlet /></AdminLayout>}
+          {isPublicPath ? (
+            <Outlet />
+          ) : (
+            <AdminLayout>
+              <Outlet />
+            </AdminLayout>
+          )}
           <Toaster position="top-right" richColors />
           <TanStackDevtools
             config={{

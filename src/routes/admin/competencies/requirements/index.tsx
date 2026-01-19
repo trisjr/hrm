@@ -14,13 +14,15 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
 import { RequirementsMatrix } from '@/components/competencies/requirements-matrix'
-import { Card, CardContent } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
 
 export const Route = createFileRoute('/admin/competencies/requirements/')({
   component: RouteComponent,
 })
 
+/**
+ * Requirements Matrix Management Page (Admin/HR)
+ * Allows setting required competency levels (1-5) for each career band.
+ */
 function RouteComponent() {
   const token = useAuthStore((state: any) => state.token)
 
@@ -53,23 +55,6 @@ function RouteComponent() {
       toast.error(error.message || 'Failed to update requirement')
       throw error
     }
-  }
-
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <Skeleton className="h-8 w-64" />
-        <Card>
-          <CardContent className="py-12">
-            <div className="space-y-4">
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
   }
 
   const careerBands = matrixData?.data?.careerBands || []
@@ -125,6 +110,7 @@ function RouteComponent() {
         careerBands={careerBands}
         groups={groups}
         onUpdateRequirement={handleUpdateRequirement}
+        isLoading={isLoading}
       />
     </div>
   )

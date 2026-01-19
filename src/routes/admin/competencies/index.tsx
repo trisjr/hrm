@@ -34,6 +34,10 @@ export const Route = createFileRoute('/admin/competencies/')({
   component: RouteComponent,
 })
 
+/**
+ * Main Competency Dictionary Management Page (Admin/HR)
+ * Allows managing competency groups, competencies, and their behavioral levels.
+ */
 function RouteComponent() {
   const token = useAuthStore((state: any) => state.token)
   const [selectedGroupId, setSelectedGroupId] = useState<number | undefined>()
@@ -49,13 +53,21 @@ function RouteComponent() {
   const navigate = useNavigate()
 
   // Fetch groups
-  const { data: groupsData, refetch: refetchGroups } = useQuery({
+  const {
+    data: groupsData,
+    refetch: refetchGroups,
+    isLoading: isGroupsLoading,
+  } = useQuery({
     queryKey: ['competency-groups'],
     queryFn: () => getCompetencyGroupsFn({ data: { token: token! } } as any),
   })
 
   // Fetch competencies
-  const { data: competenciesData, refetch: refetchCompetencies } = useQuery({
+  const {
+    data: competenciesData,
+    refetch: refetchCompetencies,
+    isLoading: isCompetenciesLoading,
+  } = useQuery({
     queryKey: ['competencies', selectedGroupId, searchQuery],
     queryFn: () =>
       getCompetenciesFn({
@@ -224,6 +236,7 @@ function RouteComponent() {
             onSelectGroup={setSelectedGroupId}
             onCreateGroup={() => setCreateGroupOpen(true)}
             onDeleteGroup={handleDeleteGroupClick}
+            isLoading={isGroupsLoading}
           />
         </div>
 
@@ -250,6 +263,7 @@ function RouteComponent() {
               onViewLevels={handleViewLevels}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              isLoading={isCompetenciesLoading}
             />
           </div>
         </div>
