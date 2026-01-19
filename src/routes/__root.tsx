@@ -112,21 +112,21 @@ function RootDocument() {
 
   // Handle redirects after initialization
   React.useEffect(() => {
-    // if (!isInitialized || isLoading) return
-    //
-    // // Redirect unauthenticated users from protected routes
-    // if (!isAuthenticated && !isPublicPath) {
-    //   window.location.href = '/login'
-    //   return
-    // }
-    //
-    // console.log('TJ - __root.tsx - line 117', { isInitialized, isLoginPath })
-    //
-    // // Redirect authenticated users from login page based on role
-    // if (isAuthenticated && isLoginPath) {
-    //   const redirectPath = isHROrAdmin() ? '/admin' : '/'
-    //   router.navigate({ to: redirectPath })
-    // }
+    if (!isInitialized || isLoading) return
+
+    // Redirect unauthenticated users from protected routes
+    if (!isAuthenticated && !isPublicPath) {
+      window.location.href = '/login'
+      return
+    }
+
+    console.log('TJ - __root.tsx - line 117', { isInitialized, isLoginPath })
+
+    // Redirect authenticated users from login page based on role
+    if (isAuthenticated && isLoginPath) {
+      const redirectPath = isHROrAdmin() ? '/admin' : '/'
+      router.navigate({ to: redirectPath })
+    }
   }, [
     isInitialized,
     isLoading,
