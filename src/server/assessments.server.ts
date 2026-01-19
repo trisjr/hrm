@@ -1262,17 +1262,20 @@ export const getGapAnalysisReportFn = createServerFn({
       requiredLevel: competencyRequirements.requiredLevel,
     })
     .from(userAssessmentDetails)
+    .innerJoin(userAssessments, eq(userAssessmentDetails.userAssessmentId, userAssessments.id))
+    .innerJoin(users, eq(userAssessments.userId, users.id))
     .leftJoin(
       competencies,
       eq(userAssessmentDetails.competencyId, competencies.id)
     )
     .leftJoin(
       competencyRequirements,
-      eq(competencyRequirements.competencyId, userAssessmentDetails.competencyId)
+      and(
+        eq(competencyRequirements.competencyId, userAssessmentDetails.competencyId),
+        eq(competencyRequirements.careerBandId, users.careerBandId)
+      )
     )
-    .where((userAssessmentDetails, { inArray }) =>
-      inArray(userAssessmentDetails.userAssessmentId, assessmentIds)
-    )
+    .where(inArray(userAssessmentDetails.userAssessmentId, assessmentIds))
 
   // Calculate summary statistics
   const gaps = allDetails
@@ -1618,13 +1621,18 @@ export const getTeamGapAnalysisFn = createServerFn({
       requiredLevel: competencyRequirements.requiredLevel,
     })
     .from(userAssessmentDetails)
+    .innerJoin(userAssessments, eq(userAssessmentDetails.userAssessmentId, userAssessments.id))
+    .innerJoin(users, eq(userAssessments.userId, users.id))
     .innerJoin(
       competencies,
       eq(userAssessmentDetails.competencyId, competencies.id),
     )
     .leftJoin(
       competencyRequirements,
-      eq(competencyRequirements.competencyId, competencies.id),
+      and(
+        eq(competencyRequirements.competencyId, userAssessmentDetails.competencyId),
+        eq(competencyRequirements.careerBandId, users.careerBandId)
+      )
     )
     .where(inArray(userAssessmentDetails.userAssessmentId, assessmentIds))
 

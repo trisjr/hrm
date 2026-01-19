@@ -12,10 +12,12 @@ import { CreateGroupDialog } from '@/components/competencies/create-group-dialog
 import { CreateCompetencyDialog } from '@/components/competencies/create-competency-dialog'
 import { ViewLevelsDrawer } from '@/components/competencies/view-levels-drawer'
 import { DeleteCompetencyDialog } from '@/components/competencies/delete-competency-dialog'
+import { DeleteGroupDialog } from '@/components/competencies/delete-group-dialog'
 import {
   createCompetencyFn,
   createCompetencyGroupFn,
   deleteCompetencyFn,
+  deleteCompetencyGroupFn,
   getCompetenciesFn,
   getCompetencyGroupsFn,
 } from '@/server/competencies.server'
@@ -40,7 +42,9 @@ function RouteComponent() {
   const [createCompetencyOpen, setCreateCompetencyOpen] = useState(false)
   const [viewLevelsOpen, setViewLevelsOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleteGroupDialogOpen, setDeleteGroupDialogOpen] = useState(false)
   const [selectedCompetency, setSelectedCompetency] = useState<any>(null)
+  const [selectedGroup, setSelectedGroup] = useState<any>(null)
 
   const navigate = useNavigate()
 
@@ -107,6 +111,21 @@ function RouteComponent() {
     }
   }
 
+  const handleDeleteGroup = async () => {
+    if (!selectedGroup) return
+    try {
+      await deleteCompetencyGroupFn({
+        data: { token: token!, data: { groupId: selectedGroup.id } },
+      } as any)
+      toast.success('Competency group deleted successfully')
+      setSelectedGroupId(undefined)
+      await refetchGroups()
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete group')
+      throw error
+    }
+  }
+
   const handleViewLevels = (competency: any) => {
     setSelectedCompetency(competency)
     setViewLevelsOpen(true)
@@ -119,6 +138,11 @@ function RouteComponent() {
   const handleDelete = (competency: any) => {
     setSelectedCompetency(competency)
     setDeleteDialogOpen(true)
+  }
+
+  const handleDeleteGroupClick = (group: any) => {
+    setSelectedGroup(group)
+    setDeleteGroupDialogOpen(true)
   }
 
   const openMatrix = async () => {
@@ -199,6 +223,7 @@ function RouteComponent() {
             selectedGroupId={selectedGroupId}
             onSelectGroup={setSelectedGroupId}
             onCreateGroup={() => setCreateGroupOpen(true)}
+            onDeleteGroup={handleDeleteGroupClick}
           />
         </div>
 
@@ -255,6 +280,14 @@ function RouteComponent() {
         onOpenChange={setDeleteDialogOpen}
         competencyName={selectedCompetency?.name || ''}
         onConfirm={handleDeleteCompetency}
+      />
+
+      <DeleteGroupDialog
+        open={deleteGroupDialogOpen}
+        onOpenChange={setDeleteGroupDialogOpen}
+        groupName={selectedGroup?.name || ''}
+        competencyCount={selectedGroup?.competencyCount || 0}
+        onConfirm={handleDeleteGroup}
       />
     </div>
   )
