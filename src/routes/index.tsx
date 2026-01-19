@@ -1,118 +1,203 @@
+/**
+ * Dashboard Homepage
+ * Displays personalized dashboard based on user role
+ */
 import { createFileRoute } from '@tanstack/react-router'
-import {
-  Route as RouteIcon,
-  Server,
-  Shield,
-  Sparkles,
-  Waves,
-  Zap,
+import { useSuspenseQuery } from '@tanstack/react-query'
+import { getDashboardStatsFn } from '@/server/dashboard.server'
+import { useAuthStore } from '@/store/auth.store'
+import { 
+  Building2, 
+  Home, 
+  Users, 
+  CalendarDays, 
+  Briefcase, 
+  Award, 
+  AlertCircle
 } from 'lucide-react'
+import { StatCard } from '@/components/dashboard/stat-card'
+import { RequestsWidget } from '@/components/dashboard/requests-widget'
+import { format } from 'date-fns'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 
-export const Route = createFileRoute('/')({ component: App })
+export const Route = createFileRoute('/')({
+  component: DashboardPage,
+})
 
-function App() {
-  const features = [
-    {
-      icon: <Zap className="w-12 h-12 text-cyan-400" />,
-      title: 'Powerful Server Functions',
-      description:
-        'Write server-side code that seamlessly integrates with your client components. Type-safe, secure, and simple.',
-    },
-    {
-      icon: <Server className="w-12 h-12 text-cyan-400" />,
-      title: 'Flexible Server Side Rendering',
-      description:
-        'Full-document SSR, streaming, and progressive enhancement out of the box. Control exactly what renders where.',
-    },
-    {
-      icon: <RouteIcon className="w-12 h-12 text-cyan-400" />,
-      title: 'API Routes',
-      description:
-        'Build type-safe API endpoints alongside your application. No separate backend needed.',
-    },
-    {
-      icon: <Shield className="w-12 h-12 text-cyan-400" />,
-      title: 'Strongly Typed Everything',
-      description:
-        'End-to-end type safety from server to client. Catch errors before they reach production.',
-    },
-    {
-      icon: <Waves className="w-12 h-12 text-cyan-400" />,
-      title: 'Full Streaming Support',
-      description:
-        'Stream data from server to client progressively. Perfect for AI applications and real-time updates.',
-    },
-    {
-      icon: <Sparkles className="w-12 h-12 text-cyan-400" />,
-      title: 'Next Generation Ready',
-      description:
-        'Built from the ground up for modern web applications. Deploy anywhere JavaScript runs.',
-    },
-  ]
+function DashboardPage() {
+  const token = useAuthStore((state: any) => state.token)
+  
+  const { data: dashboard } = useSuspenseQuery({
+    queryKey: ['dashboard-stats'],
+    queryFn: () => getDashboardStatsFn({ data: { token: token! } }),
+  })
+
+  const { user, role, stats, todayStatus, pendingMyRequests, upcomingHolidays, teamStats } = dashboard
+
+  const isLeaderOrAdmin = ['LEADER', 'ADMIN'].includes(role)
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
-      <section className="relative py-20 px-6 text-center overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10"></div>
-        <div className="relative max-w-5xl mx-auto">
-          <div className="flex items-center justify-center gap-6 mb-6">
-            <img
-              src="/tanstack-circle-logo.png"
-              alt="TanStack Logo"
-              className="w-24 h-24 md:w-32 md:h-32"
-            />
-            <h1 className="text-6xl md:text-7xl font-black text-white [letter-spacing:-0.08em]">
-              <span className="text-gray-300">TANSTACK</span>{' '}
-              <span className="bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
-                START
-              </span>
-            </h1>
-          </div>
-          <p className="text-2xl md:text-3xl text-gray-300 mb-4 font-light">
-            The framework for next generation AI applications
+    <div className="flex flex-col gap-6 p-6">
+      {/* 1. Welcome Section */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+            Good Morning, {user.fullName.split(' ')[0]}! ☀️
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Here's what's happening today, {format(new Date(), 'EEEE, MMMM do')}.
           </p>
-          <p className="text-lg text-gray-400 max-w-3xl mx-auto mb-8">
-            Full-stack framework powered by TanStack Router for React and Solid.
-            Build modern applications with server functions, streaming, and type
-            safety.
-          </p>
-          <div className="flex flex-col items-center gap-4">
-            <a
-              href="https://tanstack.com/start"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-8 py-3 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold rounded-lg transition-colors shadow-lg shadow-cyan-500/50"
-            >
-              Documentation
-            </a>
-            <p className="text-gray-400 text-sm mt-2">
-              Begin your TanStack Start journey by editing{' '}
-              <code className="px-2 py-1 bg-slate-700 rounded text-cyan-400">
-                /src/routes/index.tsx
-              </code>
-            </p>
-          </div>
         </div>
-      </section>
+        
+        {/* Today Status Badge */}
+        <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg shadow-sm border">
+          <span className="text-sm font-medium text-gray-500">Today Status:</span>
+          {todayStatus.status === 'OFFICE' ? (
+             <Badge className="bg-blue-500 hover:bg-blue-600">OFFICE</Badge>
+          ) : todayStatus.status === 'WFH' ? (
+             <Badge variant="secondary" className="bg-purple-100 text-purple-700">WFH</Badge>
+          ) : (
+             <Badge variant="destructive">LEAVE</Badge>
+          )}
+        </div>
+      </div>
 
-      <section className="py-16 px-6 max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map((feature, index) => (
-            <div
-              key={index}
-              className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-6 hover:border-cyan-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/10"
-            >
-              <div className="mb-4">{feature.icon}</div>
-              <h3 className="text-xl font-semibold text-white mb-3">
-                {feature.title}
-              </h3>
-              <p className="text-gray-400 leading-relaxed">
-                {feature.description}
-              </p>
-            </div>
-          ))}
+      {/* 2. Stats Grid */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Leave Taken (Month)"
+          value={`${stats.leaveTakenMonth} days`}
+          icon={CalendarDays}
+          variant="default"
+        />
+        <StatCard
+          title="WFH Taken (Month)"
+          value={`${stats.wfhTakenMonth} days`}
+          icon={Home}
+          description="Work from home"
+        />
+        <StatCard
+          title="Total Skills"
+          value={stats.totalSkills}
+          icon={Award}
+          trend={stats.totalSkills > 0 ? "Growing!" : "Add skills now"}
+        />
+        
+        {isLeaderOrAdmin && teamStats && (
+           <StatCard
+             title={role === 'ADMIN' ? 'Total Employees' : 'Team Members'}
+             value={teamStats.totalMembers}
+             icon={Users}
+             description="Active personnel"
+           />
+        )}
+      </div>
+
+      {/* 3. Main Content Grid */}
+      <div className="grid mt-2 gap-6 md:grid-cols-7 lg:grid-cols-7">
+        
+        {/* Left Column (Main) */}
+        <div className="md:col-span-4 lg:col-span-5 space-y-6">
+           
+           {/* Leader View: Team Status */}
+           {isLeaderOrAdmin && teamStats && (
+             <div className="grid gap-6 md:grid-cols-2">
+                {/* Who's Off */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                       <Building2 className="w-5 h-5 text-orange-500" />
+                       Who's Absent Today?
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {teamStats.absentToday.length === 0 ? (
+                        <p className="text-muted-foreground text-sm py-4">Everyone is present!</p>
+                    ) : (
+                        <div className="space-y-4">
+                            {teamStats.absentToday.map((req: any) => (
+                                <div key={req.id} className="flex justify-between items-center">
+                                    <div className="flex items-center gap-3">
+                                        <Avatar className="h-8 w-8">
+                                            <AvatarImage src={req.user.profile?.avatarUrl} />
+                                            <AvatarFallback>{req.user.email[0]}</AvatarFallback>
+                                        </Avatar>
+                                        <div>
+                                            <p className="text-sm font-medium">{req.user.profile?.fullName || req.user.email}</p>
+                                            <p className="text-xs text-muted-foreground">{req.type}</p>
+                                        </div>
+                                    </div>
+                                    <Badge variant="outline" className="text-[10px]">
+                                        {format(new Date(req.startDate), 'HH:mm')} - {format(new Date(req.endDate), 'HH:mm')}
+                                    </Badge>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Pending Approvals */}
+                <RequestsWidget 
+                   title={`Pending Approvals (${teamStats.pendingApprovalsCount})`}
+                   requests={teamStats.pendingApprovals}
+                   showUser={true}
+                   emptyMessage="You're all caught up! No pending requests."
+                />
+             </div>
+           )}
+
+           {/* Personal Requests (All Roles) */}
+           <RequestsWidget 
+              title="My Recent Requests"
+              requests={pendingMyRequests}
+              emptyMessage="No pending requests recently."
+           />
+
         </div>
-      </section>
+
+        {/* Right Column (Sidebar) */}
+        <div className="md:col-span-3 lg:col-span-2 space-y-6">
+           {/* Holidays */}
+           <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                   <CalendarDays className="w-5 h-5 text-green-500" />
+                   Upcoming Holidays
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                 {upcomingHolidays.length === 0 ? (
+                    <p className="text-muted-foreground text-sm">No holidays coming up soon.</p>
+                 ) : (
+                    <div className="space-y-4">
+                       {upcomingHolidays.map((h: any) => (
+                          <div key={h.id} className="flex flex-col bg-accent/50 p-3 rounded-md">
+                             <span className="font-semibold text-primary">{h.name}</span>
+                             <span className="text-sm text-muted-foreground">
+                                {format(new Date(h.date), 'EEEE, MMMM do')}
+                             </span>
+                          </div>
+                       ))}
+                    </div>
+                 )}
+              </CardContent>
+           </Card>
+
+           {/* Quick Tip (Static) */}
+           <Card className="bg-gradient-to-br from-indigo-50 to-purple-50 border-none shadow-sm">
+              <CardContent className="p-6">
+                 <h3 className="font-semibold text-indigo-700 mb-2">💡 Quick Tip</h3>
+                 <p className="text-sm text-indigo-600 mb-4">
+                    Update your skills regularly to keep your profile competitive!
+                 </p>
+              </CardContent>
+           </Card>
+        </div>
+
+      </div>
     </div>
   )
 }
