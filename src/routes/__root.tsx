@@ -24,6 +24,8 @@ const publicPaths = [
   '/mailbox',
   '/verify',
   '/privacy-policy',
+  '/forgot-password',
+  '/reset-password',
 ]
 
 interface MyRouterContext {

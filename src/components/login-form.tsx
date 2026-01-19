@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import * as React from 'react'
 import { toast } from 'sonner'
-import { useRouter } from '@tanstack/react-router'
+import { Link, useRouter } from '@tanstack/react-router'
 import type { LoginInput } from '@/lib/auth.schemas'
 import { loginSchema } from '@/lib/auth.schemas'
 import { cn } from '@/lib/utils'
@@ -89,12 +89,12 @@ export function LoginForm({
                   <FormItem>
                     <div className="flex items-center">
                       <FormLabel>Password</FormLabel>
-                      <a
-                        href="#"
+                      <Link
+                        to="/forgot-password"
                         className="ml-auto text-sm underline-offset-4 hover:underline"
                       >
                         Forgot your password?
-                      </a>
+                      </Link>
                     </div>
                     <FormControl>
                       <Input

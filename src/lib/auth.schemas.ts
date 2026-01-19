@@ -29,3 +29,24 @@ export const changePasswordSchema = z
   })
 
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>
+
+// --- Request Password Reset Schema ---
+export const requestPasswordResetSchema = z.object({
+  email: z.string().email('Please enter a valid email address.').max(255),
+})
+
+export type RequestPasswordResetInput = z.infer<typeof requestPasswordResetSchema>
+
+// --- Reset Password Schema ---
+export const resetPasswordSchema = z
+  .object({
+    token: z.string().min(1, 'Token is required'),
+    newPassword: passwordSchema,
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ['confirmPassword'],
+  })
+
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>

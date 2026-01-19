@@ -1,15 +1,32 @@
 import { createServerFn } from '@tanstack/react-start'
 import { and, eq, isNull } from 'drizzle-orm'
-import { users } from '../db/schema'
+import {
+  emailLogs,
+  emailTemplates,
+  users,
+  verificationTokens,
+} from '../db/schema'
 import {
   comparePassword,
   hashPassword,
   signToken,
   verifyToken,
 } from '../lib/auth.utils'
-import { changePasswordSchema, loginSchema } from '../lib/auth.schemas'
-import type { ChangePasswordInput, LoginInput } from '../lib/auth.schemas'
+import {
+  changePasswordSchema,
+  loginSchema,
+  requestPasswordResetSchema,
+  resetPasswordSchema,
+} from '../lib/auth.schemas'
+import type {
+  ChangePasswordInput,
+  LoginInput,
+  RequestPasswordResetInput,
+  ResetPasswordInput,
+} from '../lib/auth.schemas'
 import { db } from '@/db'
+import { replacePlaceholders, sendEmail } from '../lib/email.utils'
+import crypto from 'crypto' // Or use globalThis.crypto if available, but explicit is safer for Node
 
 // @tanstack/start might abstract cookie setting differently, but standard response is fine.
 
@@ -136,3 +153,123 @@ export const changePasswordFn = createServerFn({ method: 'POST' })
       }
     },
   )
+
+export const requestPasswordResetFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: unknown) => requestPasswordResetSchema.parse(data))
+  .handler(async ({ data }: { data: RequestPasswordResetInput }) => {
+    const { email } = data
+
+    // 1. Find user (don't reveal if user exists)
+    const user = await db.query.users.findFirst({
+      where: and(eq(users.email, email), isNull(users.deletedAt)),
+      with: {
+        profile: true,
+      },
+    })
+
+    if (!user || user.status !== 'ACTIVE') {
+      // Fake success to prevent enumeration
+      return {
+        success: true,
+        message: 'If an account exists, an email has been sent.',
+      }
+    }
+
+    // 2. Generate Token
+    const token = crypto.randomUUID()
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
+
+    // 3. Save Token
+    await db.insert(verificationTokens).values({
+      userId: user.id,
+      token,
+      type: 'RESET_PASSWORD',
+      expiresAt,
+    })
+
+    // 4. Send Email
+    // Fetch template
+    const template = await db.query.emailTemplates.findFirst({
+      where: eq(emailTemplates.code, 'PASSWORD_RESET'),
+    })
+
+    if (template) {
+      // We assume FRONTEND_URL is available via env or we construct it.
+      // Ideally should be in .env. but for now I'll fallback to localhost if missing.
+      const baseUrl = process.env.VITE_APP_URL || 'http://localhost:3000'
+      const resetLink = `${baseUrl}/reset-password?token=${token}`
+
+      const emailBody = replacePlaceholders(template.body, {
+        fullName: user.profile?.fullName || user.email,
+        resetLink,
+      })
+
+      // Send (Mock)
+      await sendEmail(user.email, template.subject, emailBody)
+
+      // Log email
+      await db.insert(emailLogs).values({
+        templateId: template.id,
+        recipientEmail: user.email,
+        subject: template.subject,
+        body: emailBody, // Audit trail
+        status: 'SENT',
+        sentAt: new Date(),
+      })
+    } else {
+      console.warn('RESET_PASSWORD email template not found.')
+    }
+
+    return {
+      success: true,
+      message: 'If an account exists, an email has been sent.',
+    }
+  })
+
+export const resetPasswordFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: unknown) => resetPasswordSchema.parse(data))
+  .handler(async ({ data }: { data: ResetPasswordInput }) => {
+    const { token, newPassword } = data
+
+    // 1. Find valid token
+    const storedToken = await db.query.verificationTokens.findFirst({
+      where: and(
+        eq(verificationTokens.token, token),
+        eq(verificationTokens.type, 'RESET_PASSWORD'),
+        isNull(verificationTokens.deletedAt),
+      ),
+    })
+
+    if (!storedToken) {
+      throw new Error('Invalid or expired password reset token.')
+    }
+
+    // Check expiry
+    if (storedToken.expiresAt < new Date()) {
+      throw new Error('Invalid or expired password reset token.')
+    }
+
+    // 2. Hash new password
+    const newPasswordHash = await hashPassword(newPassword)
+
+    // 3. Update User Password
+    await db
+      .update(users)
+      .set({
+        passwordHash: newPasswordHash,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, storedToken.userId))
+
+    // 4. Invalidate Token (Delete or Soft Delete)
+    // We'll soft delete to keep history if needed, or just delete.
+    // Spec says "Delete the used token".
+    await db
+      .delete(verificationTokens)
+      .where(eq(verificationTokens.id, storedToken.id))
+
+    return {
+      success: true,
+      message: 'Password has been reset successfully.',
+    }
+  })
