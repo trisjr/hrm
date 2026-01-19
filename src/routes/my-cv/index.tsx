@@ -72,12 +72,11 @@ function MyCVPage() {
             Preview and export your professional CV
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <EditSummaryDialog currentSummary={cvData.profile.summary} />
           <Button 
             onClick={handleExportPDF} 
             disabled={!isComplete || isExporting}
-            size="lg"
           >
             <Download className="w-4 h-4 mr-2" />
             {isExporting ? 'Generating...' : 'Download PDF'}

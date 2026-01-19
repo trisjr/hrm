@@ -34,10 +34,12 @@ export function CVPreview({ data }: { data: CVData }) {
       {/* Header */}
       <div className="border-b-2 border-primary pb-4 mb-6">
         <h1 className="text-3xl font-bold text-gray-900">{profile.fullName}</h1>
-        <div className="text-sm text-gray-600 mt-2 space-y-1">
+        <div className="flex flex-wrap gap-x-6 gap-y-1 mt-2 text-sm text-gray-600">
+          {profile.dob && <div>DOB: {formatDate(profile.dob)}</div>}
+          {profile.gender && <div>Gender: {profile.gender}</div>}
           {profile.email && <div>Email: {profile.email}</div>}
           {profile.phone && <div>Phone: {profile.phone}</div>}
-          {profile.address && <div>Address: {profile.address}</div>}
+          {profile.address && <div className="w-full">Address: {profile.address}</div>}
         </div>
       </div>
 
@@ -47,7 +49,7 @@ export function CVPreview({ data }: { data: CVData }) {
           <h2 className="text-lg font-bold text-primary border-b border-gray-200 pb-2 mb-3">
             Professional Summary
           </h2>
-          <p className="text-sm text-gray-700 leading-relaxed">{profile.summary}</p>
+          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{profile.summary}</p>
         </section>
       )}
 
@@ -94,13 +96,13 @@ export function CVPreview({ data }: { data: CVData }) {
           </h2>
           {experience.map((item, idx) => (
             <div key={idx} className="mb-4">
-              <h3 className="font-semibold text-gray-900">{item.title}</h3>
-              <p className="text-sm text-gray-600 italic">{item.institution}</p>
+              <h3 className="font-bold text-gray-900">{item.positionMajor}</h3>
+              <p className="text-sm text-gray-700 italic font-medium">{item.organizationName}</p>
               <p className="text-xs text-gray-500 mt-1">
                 {formatDate(item.startDate)} - {formatDate(item.endDate)}
               </p>
               {item.description && (
-                <p className="text-sm text-gray-700 mt-2 leading-relaxed">
+                <p className="text-sm text-gray-700 mt-2 leading-relaxed whitespace-pre-line">
                   {item.description}
                 </p>
               )}
@@ -117,13 +119,13 @@ export function CVPreview({ data }: { data: CVData }) {
           </h2>
           {education.map((item, idx) => (
             <div key={idx} className="mb-4">
-              <h3 className="font-semibold text-gray-900">{item.title}</h3>
-              <p className="text-sm text-gray-600 italic">{item.institution}</p>
+              <h3 className="font-bold text-gray-900">{item.organizationName}</h3>
+              <p className="text-sm text-gray-700 italic font-medium">{item.positionMajor}</p>
               <p className="text-xs text-gray-500 mt-1">
                 {formatDate(item.startDate)} - {formatDate(item.endDate)}
               </p>
               {item.description && (
-                <p className="text-sm text-gray-700 mt-2">{item.description}</p>
+                <p className="text-sm text-gray-700 mt-2 whitespace-pre-line">{item.description}</p>
               )}
             </div>
           ))}

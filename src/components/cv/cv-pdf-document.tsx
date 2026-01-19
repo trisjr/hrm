@@ -134,6 +134,16 @@ export function CVPDFDocument({ data }: { data: CVData }) {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.name}>{profile.fullName}</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+            {profile.dob && (
+              <Text style={styles.contactInfo}>
+                DOB: {formatDate(profile.dob)}
+              </Text>
+            )}
+            {profile.gender && (
+              <Text style={styles.contactInfo}>Gender: {profile.gender}</Text>
+            )}
+          </View>
           {profile.email && (
             <Text style={styles.contactInfo}>Email: {profile.email}</Text>
           )}
@@ -196,8 +206,8 @@ export function CVPDFDocument({ data }: { data: CVData }) {
             <Text style={styles.sectionTitle}>Work Experience</Text>
             {experience.map((item, idx) => (
               <View key={idx} style={styles.experienceItem}>
-                <Text style={styles.experienceTitle}>{item.title}</Text>
-                <Text style={styles.experienceOrg}>{item.institution}</Text>
+                <Text style={styles.experienceTitle}>{item.positionMajor}</Text>
+                <Text style={styles.experienceOrg}>{item.organizationName}</Text>
                 <Text style={styles.experienceDate}>
                   {formatDate(item.startDate)} - {formatDate(item.endDate)}
                 </Text>
@@ -215,8 +225,8 @@ export function CVPDFDocument({ data }: { data: CVData }) {
             <Text style={styles.sectionTitle}>Education</Text>
             {education.map((item, idx) => (
               <View key={idx} style={styles.experienceItem}>
-                <Text style={styles.experienceTitle}>{item.title}</Text>
-                <Text style={styles.experienceOrg}>{item.institution}</Text>
+                <Text style={styles.experienceTitle}>{item.organizationName}</Text>
+                <Text style={styles.experienceOrg}>{item.positionMajor}</Text>
                 <Text style={styles.experienceDate}>
                   {formatDate(item.startDate)} - {formatDate(item.endDate)}
                 </Text>
