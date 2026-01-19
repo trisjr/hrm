@@ -324,7 +324,38 @@ Lưu trữ các thay đổi thông tin cá nhân cần được phê duyệt.
 - **User Assessments - IDPs**: 1-1 (Mỗi đợt đánh giá có thể dẫn tới 1 kế hoạch IDP).
 - **IDPs - IDP Activities**: 1-N.
 
-## 4. Ghi chú thiết kế cho Developer
-
-- **Chỉ mục (Indexing)**: Nên đánh index cho `employee_code`, `email` và `team_id` để tối ưu hóa việc tìm kiếm và lọc nâng cao theo yêu cầu của Admin/HR.
 - **Phân quyền dữ liệu**: Khi truy vấn, hệ thống cần check `role_id`. Nếu là **Leader**, chỉ được phép query các `users` có cùng `team_id` với mình.
+
+## 6. Kỹ năng & Ngày lễ (Skills & Holidays)
+
+### 6.1. Bảng `master_skills` (Danh sách kỹ năng)
+
+- `id`: INT (PK)
+- `name`: VARCHAR - Tên kỹ năng (Java, Leadership...)
+- `type`: ENUM ('HARD_SKILL', 'SOFT_SKILL')
+- `category`: VARCHAR
+- `description`: TEXT
+
+### 6.2. Bảng `skill_levels` (Cấp độ kỹ năng)
+
+- `id`: INT (PK)
+- `skill_id`: INT (FK)
+- `name`: VARCHAR (Beginner, Intermediate, Advanced...)
+- `level_order`: INT
+
+### 6.3. Bảng `user_skills` (Kỹ năng nhân viên)
+
+- `id`: INT (PK)
+- `user_id`: INT (FK)
+- `skill_id`: INT (FK)
+- `level_id`: INT (FK)
+- `assessed_at`: DATE
+- `note`: TEXT
+
+### 6.4. Bảng `public_holidays` (Ngày lễ chung)
+
+- `id`: INT (PK)
+- `date`: DATE
+- `name`: VARCHAR
+- `country`: VARCHAR
+- `is_recurring`: BOOLEAN

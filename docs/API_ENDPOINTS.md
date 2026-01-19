@@ -139,3 +139,45 @@ This document describes the server functions (APIs) available for managing teams
 - **Input:**
   - `token`: string
 - **Response:** `{ success: true, data: Assessment[] }`
+
+---
+
+## 5. Skills Management
+
+### `searchMasterSkillsFn` (POST)
+
+- **Description:** Search for master skills.
+- **Input:** `{ token: string, query: string, type?: 'HARD_SKILL' | 'SOFT_SKILL' }`
+
+### `upsertUserSkillFn` (POST)
+
+- **Description:** Add or update a user skill.
+- **Input:** `{ token: string, skillId: number, levelId: number, note?: string }`
+
+### `deleteUserSkillFn` (POST)
+
+- **Description:** Remove a skill from user profile.
+- **Input:** `{ token: string, userSkillId: number }`
+
+---
+
+## 6. CV Builder
+
+### `getCVDataFn` (POST)
+
+- **Description:** Retrieve all data needed for CV generation.
+- **Input:** `{ token: string, userId?: number }`
+
+### `updateProfileSummaryFn` (POST)
+
+- **Description:** Update user's professional summary.
+- **Input:** `{ token: string, summary: string }`
+
+---
+
+## 7. Dashboard
+
+### `getDashboardStatsFn` (POST)
+
+- **Description:** Get aggregated statistics for the personalized dashboard.
+- **Input:** `{ token: string }`
