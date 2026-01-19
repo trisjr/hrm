@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerifyRouteImport } from './routes/verify'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
 import { Route as MailboxRouteImport } from './routes/mailbox'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ChangePasswordRouteImport } from './routes/change-password'
@@ -51,6 +52,11 @@ const VerifyRoute = VerifyRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyPolicyRoute = PrivacyPolicyRouteImport.update({
+  id: '/privacy-policy',
+  path: '/privacy-policy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MailboxRoute = MailboxRouteImport.update({
@@ -226,6 +232,7 @@ export interface FileRoutesByFullPath {
   '/change-password': typeof ChangePasswordRoute
   '/login': typeof LoginRoute
   '/mailbox': typeof MailboxRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
   '/profile': typeof ProfileRoute
   '/verify': typeof VerifyRoute
   '/admin': typeof AdminIndexRoute
@@ -261,6 +268,7 @@ export interface FileRoutesByTo {
   '/change-password': typeof ChangePasswordRoute
   '/login': typeof LoginRoute
   '/mailbox': typeof MailboxRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
   '/profile': typeof ProfileRoute
   '/verify': typeof VerifyRoute
   '/admin': typeof AdminIndexRoute
@@ -297,6 +305,7 @@ export interface FileRoutesById {
   '/change-password': typeof ChangePasswordRoute
   '/login': typeof LoginRoute
   '/mailbox': typeof MailboxRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
   '/profile': typeof ProfileRoute
   '/verify': typeof VerifyRoute
   '/admin/': typeof AdminIndexRoute
@@ -334,6 +343,7 @@ export interface FileRouteTypes {
     | '/change-password'
     | '/login'
     | '/mailbox'
+    | '/privacy-policy'
     | '/profile'
     | '/verify'
     | '/admin'
@@ -369,6 +379,7 @@ export interface FileRouteTypes {
     | '/change-password'
     | '/login'
     | '/mailbox'
+    | '/privacy-policy'
     | '/profile'
     | '/verify'
     | '/admin'
@@ -404,6 +415,7 @@ export interface FileRouteTypes {
     | '/change-password'
     | '/login'
     | '/mailbox'
+    | '/privacy-policy'
     | '/profile'
     | '/verify'
     | '/admin/'
@@ -440,6 +452,7 @@ export interface RootRouteChildren {
   ChangePasswordRoute: typeof ChangePasswordRoute
   LoginRoute: typeof LoginRoute
   MailboxRoute: typeof MailboxRoute
+  PrivacyPolicyRoute: typeof PrivacyPolicyRoute
   ProfileRoute: typeof ProfileRoute
   VerifyRoute: typeof VerifyRoute
   AdminIndexRoute: typeof AdminIndexRoute
@@ -485,6 +498,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy-policy': {
+      id: '/privacy-policy'
+      path: '/privacy-policy'
+      fullPath: '/privacy-policy'
+      preLoaderRoute: typeof PrivacyPolicyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mailbox': {
@@ -712,6 +732,7 @@ const rootRouteChildren: RootRouteChildren = {
   ChangePasswordRoute: ChangePasswordRoute,
   LoginRoute: LoginRoute,
   MailboxRoute: MailboxRoute,
+  PrivacyPolicyRoute: PrivacyPolicyRoute,
   ProfileRoute: ProfileRoute,
   VerifyRoute: VerifyRoute,
   AdminIndexRoute: AdminIndexRoute,

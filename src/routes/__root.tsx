@@ -17,7 +17,7 @@ import { useAuthStore } from '@/store/auth.store'
 import { validateTokenFn } from '@/server/validate-token.server'
 import { NotFound } from '@/components/not-found'
 
-const publicPaths = ['/login', '/register', '/change-password', '/mailbox', '/verify']
+const publicPaths = ['/login', '/register', '/change-password', '/mailbox', '/verify', '/privacy-policy']
 
 interface MyRouterContext {
   queryClient: QueryClient
