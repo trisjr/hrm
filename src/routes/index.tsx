@@ -13,6 +13,7 @@ import { format } from 'date-fns'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils.ts'
 
 export const Route = createFileRoute('/')({
   component: DashboardPage,
@@ -72,7 +73,12 @@ function DashboardPage() {
       </div>
 
       {/* 2. Stats Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div
+        className={cn(
+          'grid gap-6 md:grid-cols-2 lg:grid-cols-3',
+          isLeaderOrAdmin && teamStats ? 'md:grid-cols-3 lg:grid-cols-4' : '',
+        )}
+      >
         <StatCard
           title="Leave Taken (Month)"
           value={`${stats.leaveTakenMonth} days`}

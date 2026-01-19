@@ -96,10 +96,16 @@ export const createProfileUpdateRequestFn = createServerFn({ method: 'POST' })
         )
       }
 
+      // Fetch current profile for snapshot
+      const currentProfile = await db.query.profiles.findFirst({
+        where: eq(profiles.userId, userSession.id),
+      })
+
       // Create Request
       await db.insert(profileUpdateRequests).values({
         userId: userSession.id,
         dataChanges: updateData,
+        previousData: currentProfile, // Save snapshot
         status: 'PENDING',
       })
 
@@ -132,7 +138,11 @@ export const getMyPendingProfileRequestFn = createServerFn({ method: 'GET' })
 
     return {
       request: request
-        ? { ...request, dataChanges: request.dataChanges as Record<string, any> }
+        ? {
+            ...request,
+            dataChanges: request.dataChanges as Record<string, any>,
+            previousData: request.previousData as Record<string, any>,
+          }
         : undefined,
     }
   })
@@ -183,6 +193,7 @@ export const listProfileRequestsFn = createServerFn({ method: 'GET' })
       requests: requests.map((req) => ({
         ...req,
         dataChanges: req.dataChanges as Record<string, any>,
+        previousData: req.previousData as Record<string, any>,
       })),
     }
   })

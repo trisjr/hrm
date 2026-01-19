@@ -27,6 +27,7 @@ interface ProfileUpdateRequest {
     profile: any
   }
   dataChanges: Record<string, any>
+  previousData?: Record<string, any> | null
 }
 
 interface ProfileRequestDetailDialogProps {
@@ -134,7 +135,11 @@ export function ProfileRequestDetailDialog({
           </div>
           
           {Object.entries(request.dataChanges).map(([key, newValue]) => {
-            const oldValue = request.user.profile?.[key]
+            // Priority: previousData (snapshot) > user.profile (current DB)
+            // Even if previousData is present but key is missing, it means it was null/undefined before.
+            const oldValue = request.previousData 
+                ? request.previousData[key] 
+                : request.user.profile?.[key]
             
             // Skip showing if values are basically same
             if (String(oldValue) === String(newValue)) return null

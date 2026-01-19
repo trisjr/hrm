@@ -1,11 +1,19 @@
-import { Briefcase, Calendar, Hash, Mail, MapPin, Phone } from 'lucide-react'
+import {
+  AlertTriangle,
+  Briefcase,
+  Calendar,
+  Edit2,
+  Hash,
+  Mail,
+  MapPin,
+  Phone,
+} from 'lucide-react'
 import { format } from 'date-fns'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge.tsx'
 import { Button } from '@/components/ui/button'
-import { Edit2, AlertTriangle } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { ProfileEditDialog } from './profile-edit-dialog'
 import { useState } from 'react'
@@ -36,7 +44,10 @@ interface UserInfoSidebarProps {
   } | null
 }
 
-export function UserInfoSidebar({ user, pendingRequest }: UserInfoSidebarProps) {
+export function UserInfoSidebar({
+  user,
+  pendingRequest,
+}: UserInfoSidebarProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const { profile, employeeCode, email, phone, careerBand } = user
   const initials =
@@ -63,12 +74,6 @@ export function UserInfoSidebar({ user, pendingRequest }: UserInfoSidebarProps) 
           {profile?.fullName}
         </h2>
         <p className="text-muted-foreground font-medium">#{employeeCode}</p>
-        <p className="text-sm text-muted-foreground mt-1">
-          {careerBand?.title ||
-            user.role?.roleName
-              .toLowerCase()
-              .replace(/\b\w/g, (l) => l.toUpperCase())}
-        </p>
         <Badge
           variant="secondary"
           className="bg-blue-500 text-white dark:bg-blue-600 mb-4"

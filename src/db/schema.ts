@@ -790,6 +790,7 @@ export const profileUpdateRequests = pgTable('profile_update_requests', {
     .references(() => users.id)
     .notNull(),
   dataChanges: json('data_changes').notNull(),
+  previousData: json('previous_data'), // Snapshot of profile before changes
   status: profileUpdateStatusEnum('status').default('PENDING'),
   reviewerId: integer('reviewer_id').references(() => users.id),
   rejectionReason: text('rejection_reason'),
