@@ -17,6 +17,17 @@ import { format } from 'date-fns'
 
 export const Route = createFileRoute('/timesheet/')({
   component: TimesheetPage,
+  errorComponent: ({ error }) => (
+    <div className="p-4 text-red-500">
+      <h2 className="text-lg font-bold">Error loading timesheet</h2>
+      <pre>{error.message}</pre>
+    </div>
+  ),
+  pendingComponent: () => (
+    <div className="flex items-center justify-center p-8">
+      <span className="text-muted-foreground">Loading timesheet...</span>
+    </div>
+  ),
 })
 
 function TimesheetPage() {
@@ -25,11 +36,14 @@ function TimesheetPage() {
   const [currentMonth, setCurrentMonth] = useState(today.getMonth() + 1)
   const [currentYear, setCurrentYear] = useState(today.getFullYear())
 
+  console.log('Rendering TimesheetPage', { currentMonth, currentYear, token })
+
   // Fetch timesheet data
   const { data: timesheetData } = useSuspenseQuery({
     queryKey: ['timesheet', currentMonth, currentYear],
-    queryFn: () =>
-      getTimesheetDataFn({
+    queryFn: async () => {
+      console.log('Fetching timesheet data...')
+      const res = await getTimesheetDataFn({
         data: {
           token: token!,
           params: {
@@ -37,7 +51,10 @@ function TimesheetPage() {
             year: currentYear,
           },
         },
-      } as any),
+      } as any)
+      console.log('Timesheet response:', res)
+      return res
+    },
   })
 
   // Fetch public holidays

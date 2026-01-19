@@ -1,6 +1,15 @@
 import { createRouter } from '@tanstack/react-router'
 import { QueryClient } from '@tanstack/react-query'
 
+// Polyfill Buffer for client-side (fixes 'Buffer is not defined' from leaked server imports)
+import { Buffer } from 'buffer'
+
+if (typeof window !== 'undefined') {
+  if (!window.Buffer) {
+    window.Buffer = Buffer as any
+  }
+}
+
 // Import the generated route tree
 import { routeTree } from './routeTree.gen'
 
