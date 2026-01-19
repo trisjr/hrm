@@ -14,6 +14,7 @@ import {
   IconUsersGroup,
   IconNotes,
   IconCertificate,
+  IconInbox,
 } from '@tabler/icons-react'
 import { useLocation, useNavigate } from '@tanstack/react-router'
 import {
@@ -177,8 +178,14 @@ const ALL_MENU_ITEMS: Array<MenuItem> = [
   },
   {
     title: 'Email Templates',
-    url: '/admin/email-templates',
+    url: '/admin/emails',
     icon: IconMail,
+    roles: ['ADMIN', 'HR'],
+  },
+  {
+    title: 'Mailbox Tracker',
+    url: '/mailbox',
+    icon: IconInbox,
     roles: ['ADMIN', 'HR'],
   },
   {
