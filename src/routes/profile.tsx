@@ -27,7 +27,6 @@ function RouteComponent() {
 
   useEffect(() => {
     const fetchData = async () => {
-      // Nếu không có token, chuyển hướng về login
       if (!token) {
         router.navigate({ to: '/login' })
         return
@@ -52,7 +51,7 @@ function RouteComponent() {
       }
     }
 
-    fetchData()
+    fetchData().then(() => {})
   }, [token, router])
 
   if (isLoading || !data) {
@@ -60,12 +59,12 @@ function RouteComponent() {
       <ProfileLayout
         sidebar={
           <div className="space-y-6">
-            <Skeleton className="h-[400px] w-full rounded-xl" />
+            <Skeleton className="h-100 w-full rounded-xl" />
           </div>
         }
         content={
           <div className="space-y-6">
-            <Skeleton className="h-[600px] w-full rounded-xl" />
+            <Skeleton className="h-150 w-full rounded-xl" />
           </div>
         }
       />
@@ -75,7 +74,10 @@ function RouteComponent() {
   return (
     <ProfileLayout
       sidebar={
-        <UserInfoSidebar user={data.user} pendingRequest={data.pendingRequest} />
+        <UserInfoSidebar
+          user={data.user}
+          pendingRequest={data.pendingRequest}
+        />
       }
       content={<EducationExperienceList items={data.educationExperience} />}
     />
