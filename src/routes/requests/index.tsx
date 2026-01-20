@@ -1,5 +1,7 @@
 import * as React from 'react'
-import { Link, createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { z } from 'zod'
+import { useQuery } from '@tanstack/react-query'
 import { Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
@@ -35,13 +37,25 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Pagination } from '@/components/common/pagination'
+
+// Search params validation
+const requestsSearchSchema = z.object({
+  page: z.coerce.number().min(1).optional().default(1),
+  limit: z.coerce.number().min(1).max(100).optional().default(10),
+  tab: z.enum(['sent', 'received']).optional().default('sent'),
+})
 
 export const Route = createFileRoute('/requests/')({
+  validateSearch: (search) => requestsSearchSchema.parse(search),
   component: RouteComponent,
 })
 
 function RouteComponent() {
+  const navigate = useNavigate({ from: Route.fullPath })
+  const { tab, page, limit } = Route.useSearch()
   const { token, user } = useAuthStore()
+
   const [isDialogOpen, setIsDialogOpen] = React.useState(false)
   const [editRequest, setEditRequest] = React.useState<RequestResponse | null>(
     null,
@@ -49,11 +63,6 @@ function RouteComponent() {
   const [requestToCancel, setRequestToCancel] = React.useState<number | null>(
     null,
   )
-  const [sentRequests, setSentRequests] = React.useState<Array<RequestResponse>>([])
-  const [receivedRequests, setReceivedRequests] = React.useState<
-    Array<RequestResponse>
-  >([])
-  const [isLoading, setIsLoading] = React.useState(true)
 
   // Check if user can see "Received" tab (Leader or HR/Admin)
   const canApprove =
@@ -61,35 +70,72 @@ function RouteComponent() {
     user?.roleName === 'HR' ||
     user?.roleName === 'ADMIN'
 
-  // Fetch data
-  const fetchData = React.useCallback(async () => {
-    if (!token) return
+  // Determine active tab for fetching logic
+  const activeTab = canApprove ? (tab as 'sent' | 'received') : 'sent'
 
-    setIsLoading(true)
-    try {
-      // Fetch sent requests
-      const sentResponse = await getRequestsSentFn({ data: { token } })
-      setSentRequests((sentResponse.data as any) || [])
+  // Query for Sent Requests
+  const sentQuery = useQuery({
+    queryKey: ['requests', 'sent', page, limit],
+    queryFn: async () => {
+      if (!token) throw new Error('Authentication required')
 
-      // Fetch received requests if user has approval permission
-      if (canApprove) {
-        const receivedResponse = await getRequestsReceivedFn({
-          data: { token },
-        })
-        setReceivedRequests((receivedResponse.data as any) || [])
-      }
-    } catch (error: any) {
-      toast.error('Failed to load requests', {
-        description: error.message || 'An error occurred',
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }, [token, canApprove])
+      return await getRequestsSentFn({ data: { token, page, limit } })
+    },
+    enabled: !!token && activeTab === 'sent',
+  })
 
-  React.useEffect(() => {
-    fetchData()
-  }, [fetchData])
+  // Query for Received Requests
+  const receivedQuery = useQuery({
+    queryKey: ['requests', 'received', page, limit],
+    queryFn: async () => {
+      if (!token) throw new Error('Authentication required')
+
+      return await getRequestsReceivedFn({ data: { token, page, limit } })
+    },
+    enabled: !!token && activeTab === 'received' && canApprove,
+  })
+
+  // Derive data for display
+  const sentRequests = (sentQuery.data?.data as RequestResponse[]) || []
+  const receivedRequests = (receivedQuery.data?.data as RequestResponse[]) || []
+
+  // Decide which data to use for current view logic (like finding item to delete)
+  const currentRequestsList =
+    activeTab === 'sent' ? sentRequests : receivedRequests
+
+  // Pagination logic based on active tab
+  const currentPagination =
+    activeTab === 'sent'
+      ? (sentQuery.data as any)?.pagination
+      : (receivedQuery.data as any)?.pagination
+
+  const pagination = currentPagination || {
+    page,
+    limit,
+    total: 0,
+    totalPages: 0,
+  }
+
+  const handlePageChange = async (newPage: number) => {
+    await navigate({
+      search: (prev) => ({ ...prev, page: newPage }),
+    })
+  }
+
+  const handleTabChange = async (newTab: string) => {
+    await navigate({
+      search: (prev) => ({
+        ...prev,
+        tab: newTab as 'sent' | 'received',
+        page: 1,
+      }),
+    })
+  }
+
+  const handleRefresh = async () => {
+    if (activeTab === 'sent') await sentQuery.refetch()
+    else await receivedQuery.refetch()
+  }
 
   // Create or update request
   const handleSubmitRequest = async (data: CreateRequestInput) => {
@@ -119,9 +165,9 @@ function RouteComponent() {
         })
         toast.success('Request submitted successfully')
       }
-      fetchData() // Refresh data
-      setEditRequest(null) // Clear edit state
-      setIsDialogOpen(false) // Close dialog
+      await handleRefresh()
+      setEditRequest(null)
+      setIsDialogOpen(false)
     } catch (error: any) {
       toast.error(
         editRequest ? 'Failed to update request' : 'Failed to create request',
@@ -146,8 +192,8 @@ function RouteComponent() {
 
   // Find request to cancel for display
   const targetRequest = React.useMemo(
-    () => sentRequests.find((r) => r.id === requestToCancel),
-    [sentRequests, requestToCancel],
+    () => currentRequestsList.find((r) => r.id === requestToCancel),
+    [currentRequestsList, requestToCancel],
   )
 
   // Confirm cancel
@@ -162,7 +208,7 @@ function RouteComponent() {
         },
       })
       toast.success('Request cancelled successfully')
-      fetchData() // Refresh data
+      await handleRefresh()
       setRequestToCancel(null)
     } catch (error: any) {
       toast.error('Failed to cancel request', {
@@ -186,7 +232,7 @@ function RouteComponent() {
         },
       })
       toast.success('Request approved successfully')
-      fetchData() // Refresh data
+      await handleRefresh()
     } catch (error: any) {
       toast.error('Failed to approve request', {
         description: error.message || 'An error occurred',
@@ -210,7 +256,7 @@ function RouteComponent() {
         },
       })
       toast.success('Request rejected')
-      fetchData() // Refresh data
+      await handleRefresh()
     } catch (error: any) {
       toast.error('Failed to reject request', {
         description: error.message || 'An error occurred',
@@ -256,39 +302,54 @@ function RouteComponent() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue={canApprove ? 'received' : 'sent'} className="w-full">
+      <Tabs
+        defaultValue={tab}
+        value={tab}
+        onValueChange={handleTabChange}
+        className="w-full"
+      >
         {canApprove && (
-          <TabsList className="grid w-full grid-cols-2">
-            {canApprove && <TabsTrigger value="received">Received</TabsTrigger>}
-            <TabsTrigger value="sent">
-              {canApprove ? 'Sent' : 'My Requests'}
-            </TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsTrigger value="sent">My Requests (Sent)</TabsTrigger>
+            <TabsTrigger value="received">Team Requests (Received)</TabsTrigger>
           </TabsList>
         )}
 
-        {/* Received Requests Tab */}
-        {canApprove && (
-          <TabsContent value="received">
+        {/* Content Area */}
+        <div className="mt-0">
+          {canApprove && (
+            <TabsContent value="received" className="mt-0">
+              <RequestsTable
+                mode="received"
+                data={receivedRequests}
+                onApprove={handleApprove}
+                onReject={handleReject}
+                isLoading={receivedQuery.isLoading}
+              />
+            </TabsContent>
+          )}
+
+          <TabsContent value="sent" className="mt-0">
             <RequestsTable
-              mode="received"
-              data={receivedRequests}
-              onApprove={handleApprove}
-              onReject={handleReject}
-              isLoading={isLoading}
+              mode="sent"
+              data={sentRequests}
+              onEdit={handleEdit}
+              onCancel={handleCancelClick}
+              isLoading={sentQuery.isLoading}
             />
           </TabsContent>
-        )}
+        </div>
 
-        {/* Sent Requests Tab */}
-        <TabsContent value="sent">
-          <RequestsTable
-            mode="sent"
-            data={sentRequests}
-            onEdit={handleEdit}
-            onCancel={handleCancelClick}
-            isLoading={isLoading}
-          />
-        </TabsContent>
+        {/* Pagination */}
+        {pagination.totalPages > 1 && (
+          <div className="flex justify-center mt-6">
+            <Pagination
+              currentPage={pagination.page}
+              totalPages={pagination.totalPages}
+              onPageChange={handlePageChange}
+            />
+          </div>
+        )}
       </Tabs>
 
       {/* Create/Edit Request Dialog */}

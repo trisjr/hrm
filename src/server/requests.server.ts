@@ -3,7 +3,7 @@
  * Handle CRUD operations for Work Requests (Leave, WFH, etc.)
  */
 import { createServerFn } from '@tanstack/react-start'
-import { and, desc, eq, inArray, isNull } from 'drizzle-orm'
+import { and, desc, eq, inArray, isNull, count } from 'drizzle-orm'
 import { z } from 'zod'
 import type {
   ApproveRequestInput,
@@ -157,38 +157,80 @@ export const createRequestFn = createServerFn({ method: 'POST' })
  */
 export const getRequestsSentFn = createServerFn({ method: 'GET' })
   .inputValidator((data: unknown) => {
-    return z.object({ token: z.string() }).parse(data)
+    return z
+      .object({
+        token: z.string(),
+        page: z.number().int().min(1).optional().default(1),
+        limit: z.number().int().min(1).max(100).optional().default(10),
+      })
+      .parse(data)
   })
-  .handler(async ({ data }: { data: { token: string } }) => {
-    const { token } = data
+  .handler(
+    async ({
+      data,
+    }: {
+      data: { token: string; page: number; limit: number }
+    }) => {
+      const { token, page, limit } = data
 
-    // Authentication
-    const userSession = verifyToken(token)
-    if (!userSession || !userSession.id) {
-      throw new Error('Unauthorized: Invalid authentication token')
-    }
+      // Authentication
+      const userSession = verifyToken(token)
+      if (!userSession || !userSession.id) {
+        throw new Error('Unauthorized: Invalid authentication token')
+      }
 
-    // Fetch requests
-    const requests = await db.query.workRequests.findMany({
-      where: and(
-        eq(workRequests.userId, userSession.id),
-        isNull(workRequests.deletedAt),
-      ),
-      with: {
-        approver: {
-          with: {
-            profile: true,
+      console.log(`[getRequestsSentFn] User: ${userSession.id}, Page: ${page}, Limit: ${limit}`)
+
+      const offset = (page - 1) * limit
+
+      // Count total requests
+      const [totalResult] = await db
+        .select({ count: count() })
+        .from(workRequests)
+        .where(
+          and(
+            eq(workRequests.userId, userSession.id),
+            isNull(workRequests.deletedAt),
+          ),
+        )
+
+      const total = totalResult?.count || 0
+      const totalPages = Math.ceil(total / limit)
+      
+      console.log(`[getRequestsSentFn] Total requests found: ${total}`)
+
+      // Fetch paginated requests
+      const requests = await db.query.workRequests.findMany({
+        where: and(
+          eq(workRequests.userId, userSession.id),
+          isNull(workRequests.deletedAt),
+        ),
+        with: {
+          approver: {
+            with: {
+              profile: true,
+            },
           },
         },
-      },
-      orderBy: [desc(workRequests.createdAt)],
-    })
+        orderBy: [desc(workRequests.createdAt)],
+        limit,
+        offset,
+      })
+      
+      console.log(`[getRequestsSentFn] Fetched ${requests.length} requests`)
 
-    return {
-      success: true,
-      data: requests,
-    }
-  })
+      return {
+        success: true,
+        data: requests,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages,
+        },
+      }
+    },
+  )
 
 /**
  * Get Received Requests
@@ -199,75 +241,70 @@ export const getRequestsSentFn = createServerFn({ method: 'GET' })
  */
 export const getRequestsReceivedFn = createServerFn({ method: 'GET' })
   .inputValidator((data: unknown) => {
-    return z.object({ token: z.string() }).parse(data)
+    return z
+      .object({
+        token: z.string(),
+        page: z.number().int().min(1).optional().default(1),
+        limit: z.number().int().min(1).max(100).optional().default(10),
+      })
+      .parse(data)
   })
-  .handler(async ({ data }: { data: { token: string } }) => {
-    const { token } = data
+  .handler(
+    async ({
+      data,
+    }: {
+      data: { token: string; page: number; limit: number }
+    }) => {
+      const { token, page, limit } = data
 
-    // Authentication
-    const userSession = verifyToken(token)
-    if (!userSession || !userSession.id) {
-      throw new Error('Unauthorized: Invalid authentication token')
-    }
+      // Authentication
+      const userSession = verifyToken(token)
+      if (!userSession || !userSession.id) {
+        throw new Error('Unauthorized: Invalid authentication token')
+      }
 
-    // Get current user with role and team info
-    const currentUser = await db.query.users.findFirst({
-      where: eq(users.id, userSession.id),
-      with: {
-        role: true,
-        leadingTeam: {
-          with: {
-            members: true,
-          },
-        },
-      },
-    })
+      const offset = (page - 1) * limit
 
-    if (!currentUser?.role) {
-      throw new Error('User role not found')
-    }
-
-    let requests: Array<any> = []
-
-    // HR/Admin: See all pending requests
-    if (
-      currentUser.role.roleName === 'HR' ||
-      currentUser.role.roleName === 'ADMIN'
-    ) {
-      requests = await db.query.workRequests.findMany({
-        where: and(
-          eq(workRequests.status, 'PENDING'),
-          isNull(workRequests.deletedAt),
-        ),
+      // Get current user with role and team info
+      const currentUser = await db.query.users.findFirst({
+        where: eq(users.id, userSession.id),
         with: {
-          user: {
+          role: true,
+          leadingTeam: {
             with: {
-              profile: true,
-              team: true,
-              role: true,
+              members: true,
             },
           },
         },
-        orderBy: [desc(workRequests.createdAt)],
       })
-    }
-    // Leader: See pending requests from team members (exclude Leaders and self)
-    else if (
-      currentUser.role.roleName === 'Leader' &&
-      currentUser.leadingTeam
-    ) {
-      // Get team member IDs (excluding Leaders)
-      const teamMembers = currentUser.leadingTeam.members || []
-      const memberIds = teamMembers
-        .filter((member) => member.id !== currentUser.id) // Exclude self
-        .map((member) => member.id)
 
-      if (memberIds.length > 0) {
-        // Fetch requests and filter out Leader requests on backend
-        const allRequests = await db.query.workRequests.findMany({
+      if (!currentUser?.role) {
+        throw new Error('User role not found')
+      }
+
+      let requests: Array<any> = []
+      let total = 0
+
+      // HR/Admin: See all pending requests
+      if (
+        currentUser.role.roleName === 'HR' ||
+        currentUser.role.roleName === 'ADMIN'
+      ) {
+        // Count total
+        const [totalResult] = await db
+          .select({ count: count() })
+          .from(workRequests)
+          .where(
+            and(
+              eq(workRequests.status, 'PENDING'),
+              isNull(workRequests.deletedAt),
+            ),
+          )
+        total = totalResult?.count || 0
+
+        requests = await db.query.workRequests.findMany({
           where: and(
             eq(workRequests.status, 'PENDING'),
-            inArray(workRequests.userId, memberIds),
             isNull(workRequests.deletedAt),
           ),
           with: {
@@ -280,24 +317,80 @@ export const getRequestsReceivedFn = createServerFn({ method: 'GET' })
             },
           },
           orderBy: [desc(workRequests.createdAt)],
+          limit,
+          offset,
         })
-
-        // Filter out requests from Leaders (only DEV requests)
-        requests = allRequests.filter(
-          (req) => req.user.role?.roleName !== 'Leader',
-        )
       }
-    }
-    // DEV: No permission to approve
-    else {
-      requests = []
-    }
+      // Leader: See pending requests from team members (exclude Leaders and self)
+      else if (
+        currentUser.role.roleName === 'Leader' &&
+        currentUser.leadingTeam
+      ) {
+        // Get team member IDs (excluding Leaders)
+        const teamMembers = currentUser.leadingTeam.members || []
+        const memberIds = teamMembers
+          .filter((member) => member.id !== currentUser.id) // Exclude self
+          .map((member) => member.id)
 
-    return {
-      success: true,
-      data: requests,
-    }
-  })
+        if (memberIds.length > 0) {
+          // Count total (approximate, includes Leaders initially)
+          // Ideally we filter leaders out in DB query, but Role is joined.
+          // For simplicity, we'll fetch ID list first or just apply pagination on fetched list (not ideal for large data).
+          // Better approach: Join with Users and Roles to filter in SQL.
+          // Given constraint, let's fetch IDs first.
+
+          // Optimization: Since we need to filter by Role 'Leader', we can't easily do it in simple where clause without joining.
+          // Let's assume for pagination we count all valid team member requests first.
+          // Wait, the original logic filtered `request.user.role?.roleName !== 'Leader'` in JS memory.
+          // That breaks SQL pagination.
+          // We MUST do this in SQL or accept imperfect pagination.
+          // Let's try to query Users first to get non-leader member IDs.
+
+
+          const validMemberIds = await db.query.users.findMany({
+             where: inArray(users.id, memberIds),
+             with: { role: true },
+             columns: { id: true }
+          }).then(users => users.filter(u => u.role?.roleName !== 'Leader').map(u => u.id))
+          
+          if (validMemberIds.length > 0) {
+             const [totalResult] = await db.select({ count: count() })
+                .from(workRequests)
+                .where(and(eq(workRequests.status, 'PENDING'), inArray(workRequests.userId, validMemberIds), isNull(workRequests.deletedAt)))
+             total = totalResult?.count || 0
+
+             requests = await db.query.workRequests.findMany({
+                where: and(eq(workRequests.status, 'PENDING'), inArray(workRequests.userId, validMemberIds), isNull(workRequests.deletedAt)),
+                with: {
+                    user: { with: { profile: true, team: true, role: true } }
+                },
+                orderBy: [desc(workRequests.createdAt)],
+                limit,
+                offset
+             })
+          }
+        }
+      }
+      // DEV: No permission to approve
+      else {
+        requests = []
+        total = 0
+      }
+
+      const totalPages = Math.ceil(total / limit)
+
+      return {
+        success: true,
+        data: requests,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages,
+        },
+      }
+    },
+  )
 
 /**
  * Approve Request

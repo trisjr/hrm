@@ -12,17 +12,17 @@ import {
   signToken,
   verifyToken,
 } from '../lib/auth.utils'
-import {
-  changePasswordSchema,
-  loginSchema,
-  requestPasswordResetSchema,
-  resetPasswordSchema,
-} from '../lib/auth.schemas'
 import type {
   ChangePasswordInput,
   LoginInput,
   RequestPasswordResetInput,
   ResetPasswordInput,
+} from '../lib/auth.schemas'
+import {
+  changePasswordSchema,
+  loginSchema,
+  requestPasswordResetSchema,
+  resetPasswordSchema,
 } from '../lib/auth.schemas'
 import { db } from '@/db'
 import { replacePlaceholders, sendEmail } from '../lib/email.utils'
