@@ -2,19 +2,19 @@
 
 import type { Icon } from '@tabler/icons-react'
 import {
+  IconCertificate,
   IconChartBar,
   IconClipboardList,
   IconClock,
   IconDashboard,
   IconFileText,
+  IconInbox,
   IconMail,
+  IconNotes,
   IconTarget,
   IconUserEdit,
   IconUsers,
   IconUsersGroup,
-  IconNotes,
-  IconCertificate,
-  IconInbox,
 } from '@tabler/icons-react'
 import { useLocation, useNavigate } from '@tanstack/react-router'
 import {
@@ -178,7 +178,7 @@ const ALL_MENU_ITEMS: Array<MenuItem> = [
   },
   {
     title: 'Email Templates',
-    url: '/admin/emails',
+    url: '/admin/email-templates',
     icon: IconMail,
     roles: ['ADMIN', 'HR'],
   },
