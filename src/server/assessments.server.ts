@@ -3,7 +3,7 @@
  * Handle individual competency assessments workflow
  */
 import { createServerFn } from '@tanstack/react-start'
-import { and, eq, inArray, isNull, desc, ne } from 'drizzle-orm'
+import { and, desc, eq, inArray, isNull, ne } from 'drizzle-orm'
 import { z } from 'zod'
 import {
   createUserAssessmentSchema,
@@ -17,11 +17,11 @@ import {
   competencies,
   competencyGroups,
   competencyRequirements,
+  emailLogs,
+  emailTemplates,
   userAssessmentDetails,
   userAssessments,
   users,
-  emailTemplates,
-  emailLogs,
 } from '@/db/schema'
 import { replacePlaceholders, sendEmail } from '@/lib/email.utils'
 import { verifyToken } from '@/lib/auth.utils'
@@ -70,10 +70,10 @@ async function verifyAdminOrHR(token: string) {
 
 /**
  * Create a new user assessment for an active cycle
- * 
+ *
  * @description Creates assessment entry and generates detail records for all competencies
  * required by the user's role and career band. This initializes the assessment workflow.
- * 
+ *
  * **Workflow**:
  * 1. Verify Admin/HR permissions
  * 2. Validate cycle is ACTIVE
@@ -81,22 +81,22 @@ async function verifyAdminOrHR(token: string) {
  * 4. Fetch required competencies for user's role + band
  * 5. Create main assessment record (status: SELF_ASSESSING)
  * 6. Generate detail records for each competency (scores initially null)
- * 
+ *
  * **Business Rules**:
  * - Only one active assessment per user per cycle
  * - User must have assigned career band
  * - At least one competency must be required for the role
- * 
+ *
  * @param token - JWT authentication token
  * @param data.userId - Target user ID
  * @param data.cycleId - Assessment cycle ID
- * 
+ *
  * @throws {Error} Insufficient permissions
  * @throws {Error} Cycle not found or not active
  * @throws {Error} User has no career band assigned
  * @throws {Error} No competencies required for this role
  * @throws {Error} Assessment already exists for this user in this cycle
- * 
+ *
  * @returns Assessment with details array
  */
 export const createUserAssessmentFn = createServerFn({
@@ -322,31 +322,31 @@ export const getMyAssessmentFn = createServerFn({ method: 'POST' }).handler(
 
 /**
  * Submit self-assessment scores (Employee action)
- * 
+ *
  * @description Allows employee to rate themselves on required competencies.
  * Updates assessment status to LEADER_ASSESSING after submission.
- * 
+ *
  * **Workflow**:
  * 1. Verify user authentication
  * 2. Confirm assessment belongs to current user
  * 3. Validate assessment is in SELF_ASSESSING status
  * 4. Update selfScore and selfNotes for each competency
  * 5. Change assessment status to LEADER_ASSESSING
- * 
+ *
  * **Business Rules**:
  * - Can only submit own assessment
  * - Assessment must be in SELF_ASSESSING status
  * - Scores must be 1-5 for each competency
  * - Once submitted, self-scores are locked
- * 
+ *
  * @param token - JWT authentication token
  * @param data.assessmentId - Assessment ID
  * @param data.scores - Array of {competencyId, score, notes}
- * 
+ *
  * @throws {Error} Assessment not found
  * @throws {Error} Unauthorized (not your assessment)
  * @throws {Error} Invalid status (not in SELF_ASSESSING)
- * 
+ *
  * @returns Success status
  */
 export const submitSelfAssessmentFn = createServerFn({
@@ -420,24 +420,24 @@ export const submitSelfAssessmentFn = createServerFn({
 
   // Notify Leader
   const requesterFull = await db.query.users.findFirst({
-        where: eq(users.id, user.id),
-        with: { 
-            team: {
-                with: { leader: { with: { profile: true } } }
-            },
-            profile: true
-        }
+    where: eq(users.id, user.id),
+    with: {
+      team: {
+        with: { leader: { with: { profile: true } } },
+      },
+      profile: true,
+    },
   })
-  
+
   const leader = requesterFull?.team?.leader
   if (leader && leader.email) {
-       const subject = `Assessment Submitted: ${requesterFull.profile?.fullName || 'Employee'}`
-       const body = `<p>Dear ${leader.profile?.fullName || 'Leader'},</p>
+    const subject = `Assessment Submitted: ${requesterFull.profile?.fullName || 'Employee'}`
+    const body = `<p>Dear ${leader.profile?.fullName || 'Leader'},</p>
        <p>${requesterFull.profile?.fullName} has completed their self-assessment.</p>
        <p>Please log in to the system to provide your assessment.</p>
        <p><a href="${process.env.APP_URL}/team/assessments">Go to Team Assessments</a></p>`
-       
-       await sendEmail(leader.email, subject, body)
+
+    await sendEmail(leader.email, subject, body)
   }
 
   return {
@@ -462,14 +462,14 @@ export const getMyAssessmentsHistoryFn = createServerFn({
   const assessments = await db.query.userAssessments.findMany({
     where: eq(userAssessments.userId, user.id),
     with: {
-        cycle: true
+      cycle: true,
     },
-    orderBy: [desc(userAssessments.createdAt)]
+    orderBy: [desc(userAssessments.createdAt)],
   })
 
   console.log('Assessments Found:', assessments.length)
   if (assessments.length > 0) {
-      console.log('First Assessment Status:', assessments[0].status)
+    console.log('First Assessment Status:', assessments[0].status)
   }
   console.log('---------------------------------------')
 
@@ -563,7 +563,36 @@ export const submitLeaderAssessmentFn = createServerFn({
 })
 
 /**
- * Finalize assessment (Admin/HR only)
+ * Finalize assessment (Admin/HR/Leader only)
+ *
+ * @description Allows Admin/HR or Team Leader to set final scores after discussion.
+ * This is the final step in the assessment workflow.
+ *
+ * **Workflow**:
+ * 1. Verify user is Admin/HR or the employee's team leader
+ * 2. Validate assessment is in DISCUSSION status
+ * 3. Update final scores for all competencies
+ * 4. Calculate average final score and gap
+ * 5. Update assessment status to DONE
+ * 6. Send completion notification to employee
+ *
+ * **Business Rules**:
+ * - Only Admin/HR or Team Leader can finalize
+ * - Assessment must be in DISCUSSION status
+ * - All competencies must have final scores
+ * - Once DONE, assessment cannot be modified
+ *
+ * @param token - JWT authentication token
+ * @param data.assessmentId - Assessment ID
+ * @param data.finalScores - Array of {competencyId, finalScore}
+ * @param data.feedback - Overall feedback/comments
+ *
+ * @throws {Error} Assessment not found
+ * @throws {Error} Insufficient permissions
+ * @throws {Error} Invalid status (not in DISCUSSION)
+ * @throws {Error} Assessment already finalized
+ *
+ * @returns Success status with calculated averages
  */
 export const finalizeAssessmentFn = createServerFn({ method: 'POST' }).handler(
   async (ctx) => {
@@ -573,7 +602,7 @@ export const finalizeAssessmentFn = createServerFn({ method: 'POST' }).handler(
     })
     const data = schema.parse(ctx.data)
 
-    await verifyAdminOrHR(data.token)
+    const user = await verifyUser(data.token)
 
     const { assessmentId, finalScores, feedback } = data.data
 
@@ -584,6 +613,8 @@ export const finalizeAssessmentFn = createServerFn({ method: 'POST' }).handler(
         user: {
           with: {
             careerBand: true,
+            team: true,
+            profile: true,
           },
         },
       },
@@ -593,9 +624,27 @@ export const finalizeAssessmentFn = createServerFn({ method: 'POST' }).handler(
       throw new Error('Assessment not found')
     }
 
-    if (assessment.status === 'DONE') {
-      throw new Error('Assessment has already been finalized')
+    // Check permissions: Admin/HR or Team Leader
+    const isAdminOrHR =
+      user.role?.roleName === 'ADMIN' || user.role?.roleName === 'HR'
+    const isLeader =
+      assessment.user.team?.leaderId === user.id &&
+      assessment.user.id !== user.id
+
+    if (!isAdminOrHR && !isLeader) {
+      throw new Error(
+        'Only Admin, HR, or the team leader can finalize this assessment',
+      )
     }
+
+    // Validate status
+    if (assessment.status !== 'DISCUSSION') {
+      throw new Error(
+        'Assessment must be in DISCUSSION status to be finalized. Current status: ' +
+          assessment.status,
+      )
+    }
+
 
     // Update final scores
     for (const score of finalScores) {
@@ -657,6 +706,20 @@ export const finalizeAssessmentFn = createServerFn({ method: 'POST' }).handler(
         feedback: feedback || null,
       })
       .where(eq(userAssessments.id, assessmentId))
+
+    // Notify employee that assessment is completed
+    if (assessment.user.email) {
+      const employeeName = assessment.user.profile?.fullName || 'Employee'
+      const subject = `Your Assessment Results Are Ready`
+      const body = `<p>Dear ${employeeName},</p>
+         <p>Your competency assessment has been finalized.</p>
+         <p>Average Final Score: ${avgFinal?.toFixed(2) || 'N/A'}</p>
+         <p>Average Gap: ${avgGap?.toFixed(2) || 'N/A'}</p>
+         ${feedback ? `<p>Feedback: ${feedback}</p>` : ''}
+         <p><a href="${process.env.APP_URL}/competencies/results/${assessmentId}">View Your Results</a></p>`
+
+      await sendEmail(assessment.user.email, subject, body)
+    }
 
     return {
       success: true,
@@ -971,14 +1034,12 @@ export const startMyAssessmentFn = createServerFn({
     token: z.string(),
     cycleId: z.number().int().positive(),
   })
-  
+
   const { token, cycleId } = schema.parse(ctx.data)
   const user = await verifyUser(token)
 
   if (!user.careerBandId) {
-    throw new Error(
-      'You are not assigned to a Career Band. Please contact HR.',
-    )
+    throw new Error('You are not assigned to a Career Band. Please contact HR.')
   }
 
   // 1. Verify Cycle
@@ -1037,18 +1098,18 @@ export const startMyAssessmentFn = createServerFn({
 
 /**
  * Get Competency Radar Chart Data
- * 
+ *
  * @description Returns aggregated competency data grouped by competency groups
  * for radar chart visualization. Shows final scores vs required levels.
- * 
+ *
  * **Use Cases**:
  * - Individual assessment results page (userId + assessmentId)
  * - Team overview (multiple users)
- * 
+ *
  * @param token - JWT authentication token
  * @param params.userId - Optional user ID (defaults to current user)
  * @param params.assessmentId - Optional specific assessment ID
- * 
+ *
  * @returns Radar chart data grouped by competency groups
  */
 export const getCompetencyRadarDataFn = createServerFn({
@@ -1056,10 +1117,12 @@ export const getCompetencyRadarDataFn = createServerFn({
 }).handler(async (ctx) => {
   const schema = z.object({
     token: z.string(),
-    params: z.object({
-      userId: z.number().int().positive().optional(),
-      assessmentId: z.number().int().positive().optional(),
-    }).optional(),
+    params: z
+      .object({
+        userId: z.number().int().positive().optional(),
+        assessmentId: z.number().int().positive().optional(),
+      })
+      .optional(),
   })
   const data = schema.parse(ctx.data)
 
@@ -1067,7 +1130,8 @@ export const getCompetencyRadarDataFn = createServerFn({
   const targetUserId = data.params?.userId || user.id
 
   // Permission check: Can only view own data unless Admin/HR/Leader
-  const isAdminOrHR = user.role?.roleName === 'ADMIN' || user.role?.roleName === 'HR'
+  const isAdminOrHR =
+    user.role?.roleName === 'ADMIN' || user.role?.roleName === 'HR'
   if (targetUserId !== user.id && !isAdminOrHR) {
     // Check if user is leader of target user
     const targetUser = await db.query.users.findFirst({
@@ -1091,7 +1155,7 @@ export const getCompetencyRadarDataFn = createServerFn({
     assessment = await db.query.userAssessments.findFirst({
       where: and(
         eq(userAssessments.userId, targetUserId),
-        eq(userAssessments.status, 'DONE')
+        eq(userAssessments.status, 'DONE'),
       ),
       with: { user: { with: { careerBand: true } } },
       orderBy: (userAssessments, { desc }) => [desc(userAssessments.createdAt)],
@@ -1117,21 +1181,24 @@ export const getCompetencyRadarDataFn = createServerFn({
     .from(userAssessmentDetails)
     .leftJoin(
       competencies,
-      eq(userAssessmentDetails.competencyId, competencies.id)
+      eq(userAssessmentDetails.competencyId, competencies.id),
     )
     .leftJoin(competencyGroups, eq(competencies.groupId, competencyGroups.id))
     .leftJoin(
       competencyRequirements,
       and(
-        eq(competencyRequirements.competencyId, userAssessmentDetails.competencyId),
-        eq(competencyRequirements.careerBandId, assessment.user.careerBandId!)
-      )
+        eq(
+          competencyRequirements.competencyId,
+          userAssessmentDetails.competencyId,
+        ),
+        eq(competencyRequirements.careerBandId, assessment.user.careerBandId!),
+      ),
     )
     .where(eq(userAssessmentDetails.userAssessmentId, assessment.id))
 
   // Group by competency group
   const groupedData: Record<string, any> = {}
-  
+
   details.forEach((detail) => {
     const groupName = detail.group?.name || 'Other'
     if (!groupedData[groupName]) {
@@ -1161,7 +1228,8 @@ export const getCompetencyRadarDataFn = createServerFn({
   const groups = Object.values(groupedData).map((group: any) => ({
     name: group.name,
     avgFinalScore: group.count > 0 ? group.totalFinalScore / group.count : 0,
-    avgRequiredLevel: group.count > 0 ? group.totalRequiredLevel / group.count : 0,
+    avgRequiredLevel:
+      group.count > 0 ? group.totalRequiredLevel / group.count : 0,
     competencies: group.competencies,
   }))
 
@@ -1173,20 +1241,20 @@ export const getCompetencyRadarDataFn = createServerFn({
 
 /**
  * Get Gap Analysis Report
- * 
+ *
  * @description Comprehensive gap analysis report for Admin/HR.
  * Provides summary statistics, competency-level breakdown, and employee-level details.
- * 
+ *
  * **Business Value**:
  * - Identify organization-wide skill gaps
  * - Prioritize training investments
  * - Track competency development trends
- * 
+ *
  * @param token - JWT authentication token (Admin/HR only)
  * @param params.teamId - Optional filter by team
  * @param params.roleId - Optional filter by role
  * @param params.cycleId - Optional filter by assessment cycle
- * 
+ *
  * @returns Gap analysis report with summary, by-competency, and by-employee breakdowns
  */
 export const getGapAnalysisReportFn = createServerFn({
@@ -1194,11 +1262,13 @@ export const getGapAnalysisReportFn = createServerFn({
 }).handler(async (ctx) => {
   const schema = z.object({
     token: z.string(),
-    params: z.object({
-      teamId: z.number().int().positive().optional(),
-      roleId: z.number().int().positive().optional(),
-      cycleId: z.number().int().positive().optional(),
-    }).optional(),
+    params: z
+      .object({
+        teamId: z.number().int().positive().optional(),
+        roleId: z.number().int().positive().optional(),
+        cycleId: z.number().int().positive().optional(),
+      })
+      .optional(),
   })
   const data = schema.parse(ctx.data)
 
@@ -1206,7 +1276,7 @@ export const getGapAnalysisReportFn = createServerFn({
 
   // Build filters for assessments
   const assessmentFilters: any[] = [eq(userAssessments.status, 'DONE')]
-  
+
   if (data.params?.cycleId) {
     assessmentFilters.push(eq(userAssessments.cycleId, data.params.cycleId))
   }
@@ -1229,10 +1299,14 @@ export const getGapAnalysisReportFn = createServerFn({
 
   // Apply additional filters
   if (data.params?.teamId) {
-    assessments = assessments.filter(a => a.user.teamId === data.params.teamId)
+    assessments = assessments.filter(
+      (a) => a.user.teamId === data.params?.teamId,
+    )
   }
   if (data.params?.roleId) {
-    assessments = assessments.filter(a => a.user.roleId === data.params.roleId)
+    assessments = assessments.filter(
+      (a) => a.user.roleId === data.params?.roleId,
+    )
   }
 
   if (assessments.length === 0) {
@@ -1252,7 +1326,7 @@ export const getGapAnalysisReportFn = createServerFn({
   }
 
   // Get all assessment details for these assessments
-  const assessmentIds = assessments.map(a => a.id)
+  const assessmentIds = assessments.map((a) => a.id)
   const allDetails = await db
     .select({
       userAssessmentId: userAssessmentDetails.userAssessmentId,
@@ -1262,34 +1336,42 @@ export const getGapAnalysisReportFn = createServerFn({
       requiredLevel: competencyRequirements.requiredLevel,
     })
     .from(userAssessmentDetails)
-    .innerJoin(userAssessments, eq(userAssessmentDetails.userAssessmentId, userAssessments.id))
+    .innerJoin(
+      userAssessments,
+      eq(userAssessmentDetails.userAssessmentId, userAssessments.id),
+    )
     .innerJoin(users, eq(userAssessments.userId, users.id))
     .leftJoin(
       competencies,
-      eq(userAssessmentDetails.competencyId, competencies.id)
+      eq(userAssessmentDetails.competencyId, competencies.id),
     )
     .leftJoin(
       competencyRequirements,
       and(
-        eq(competencyRequirements.competencyId, userAssessmentDetails.competencyId),
-        eq(competencyRequirements.careerBandId, users.careerBandId)
-      )
+        eq(
+          competencyRequirements.competencyId,
+          userAssessmentDetails.competencyId,
+        ),
+        eq(competencyRequirements.careerBandId, users.careerBandId),
+      ),
     )
     .where(inArray(userAssessmentDetails.userAssessmentId, assessmentIds))
 
   // Calculate summary statistics
   const gaps = allDetails
-    .filter(d => d.finalScore !== null && d.requiredLevel !== null)
-    .map(d => d.finalScore! - d.requiredLevel!)
-  
-  const avgGap = gaps.length > 0 ? gaps.reduce((a, b) => a + b, 0) / gaps.length : 0
-  const meetsRequirement = gaps.filter(g => g >= 0).length
-  const meetsRequirementPercent = gaps.length > 0 ? (meetsRequirement / gaps.length) * 100 : 0
+    .filter((d) => d.finalScore !== null && d.requiredLevel !== null)
+    .map((d) => d.finalScore! - d.requiredLevel!)
+
+  const avgGap =
+    gaps.length > 0 ? gaps.reduce((a, b) => a + b, 0) / gaps.length : 0
+  const meetsRequirement = gaps.filter((g) => g >= 0).length
+  const meetsRequirementPercent =
+    gaps.length > 0 ? (meetsRequirement / gaps.length) * 100 : 0
   const needsDevelopmentPercent = 100 - meetsRequirementPercent
 
   // By Competency breakdown
   const competencyMap: Record<number, any> = {}
-  allDetails.forEach(detail => {
+  allDetails.forEach((detail) => {
     if (detail.finalScore === null || detail.requiredLevel === null) return
 
     const compId = detail.competencyId
@@ -1310,34 +1392,36 @@ export const getGapAnalysisReportFn = createServerFn({
 
   const byCompetency = Object.values(competencyMap).map((item: any) => ({
     competency: item.competency,
-    avgGap: item.gaps.reduce((a: number, b: number) => a + b, 0) / item.gaps.length,
+    avgGap:
+      item.gaps.reduce((a: number, b: number) => a + b, 0) / item.gaps.length,
     employeesBelow: item.employeesBelow,
     totalAssessed: item.gaps.length,
   }))
 
   // By Employee breakdown
-  const byEmployee = assessments.map(assessment => {
+  const byEmployee = assessments.map((assessment) => {
     const employeeDetails = allDetails.filter(
-      d => d.userAssessmentId === assessment.id
+      (d) => d.userAssessmentId === assessment.id,
     )
 
     const employeeGaps = employeeDetails
-      .filter(d => d.finalScore !== null && d.requiredLevel !== null)
-      .map(d => ({
+      .filter((d) => d.finalScore !== null && d.requiredLevel !== null)
+      .map((d) => ({
         competency: d.competency,
         gap: d.finalScore! - d.requiredLevel!,
       }))
 
     const criticalGaps = employeeGaps
-      .filter(g => g.gap <= -2)
-      .map(g => ({
+      .filter((g) => g.gap <= -2)
+      .map((g) => ({
         competency: g.competency,
         gap: g.gap,
       }))
 
-    const avgEmployeeGap = employeeGaps.length > 0
-      ? employeeGaps.reduce((a, b) => a + b.gap, 0) / employeeGaps.length
-      : 0
+    const avgEmployeeGap =
+      employeeGaps.length > 0
+        ? employeeGaps.reduce((a, b) => a + b.gap, 0) / employeeGaps.length
+        : 0
 
     return {
       user: assessment.user,
@@ -1483,8 +1567,7 @@ export const getTeamRadarDataFn = createServerFn({
     }
 
     groupedData[detail.group.id].totalFinalScore += detail.finalScore
-    groupedData[detail.group.id].totalRequiredLevel +=
-      detail.requiredLevel || 0
+    groupedData[detail.group.id].totalRequiredLevel += detail.requiredLevel || 0
     groupedData[detail.group.id].count++
     if (
       detail.competency &&
@@ -1621,7 +1704,10 @@ export const getTeamGapAnalysisFn = createServerFn({
       requiredLevel: competencyRequirements.requiredLevel,
     })
     .from(userAssessmentDetails)
-    .innerJoin(userAssessments, eq(userAssessmentDetails.userAssessmentId, userAssessments.id))
+    .innerJoin(
+      userAssessments,
+      eq(userAssessmentDetails.userAssessmentId, userAssessments.id),
+    )
     .innerJoin(users, eq(userAssessments.userId, users.id))
     .innerJoin(
       competencies,
@@ -1630,9 +1716,12 @@ export const getTeamGapAnalysisFn = createServerFn({
     .leftJoin(
       competencyRequirements,
       and(
-        eq(competencyRequirements.competencyId, userAssessmentDetails.competencyId),
-        eq(competencyRequirements.careerBandId, users.careerBandId)
-      )
+        eq(
+          competencyRequirements.competencyId,
+          userAssessmentDetails.competencyId,
+        ),
+        eq(competencyRequirements.careerBandId, users.careerBandId),
+      ),
     )
     .where(inArray(userAssessmentDetails.userAssessmentId, assessmentIds))
 
@@ -1641,7 +1730,8 @@ export const getTeamGapAnalysisFn = createServerFn({
     .filter((d) => d.finalScore !== null && d.requiredLevel !== null)
     .map((d) => d.finalScore! - d.requiredLevel!)
 
-  const avgGap = gaps.length > 0 ? gaps.reduce((a, b) => a + b, 0) / gaps.length : 0
+  const avgGap =
+    gaps.length > 0 ? gaps.reduce((a, b) => a + b, 0) / gaps.length : 0
   const meetsRequirement = gaps.filter((g) => g >= 0).length
   const meetsRequirementPercent =
     gaps.length > 0 ? (meetsRequirement / gaps.length) * 100 : 0
@@ -1811,60 +1901,62 @@ export const remindPendingAssessmentsFn = createServerFn({
   const requester = await verifyAdminOrHR(input.token)
   const { cycleId } = input.data
 
-  const cycle = await db.query.assessmentCycles.findFirst({where: eq(assessmentCycles.id, cycleId)})
+  const cycle = await db.query.assessmentCycles.findFirst({
+    where: eq(assessmentCycles.id, cycleId),
+  })
 
   // Fetch pending self-assessments
   const pending = await db.query.userAssessments.findMany({
     where: and(
-        eq(userAssessments.cycleId, cycleId),
-        eq(userAssessments.status, 'SELF_ASSESSING')
+      eq(userAssessments.cycleId, cycleId),
+      eq(userAssessments.status, 'SELF_ASSESSING'),
     ),
     with: {
       user: {
-        with: { profile: true }
-      }
-    }
+        with: { profile: true },
+      },
+    },
   })
 
   // Fetch Template
   const template = await db.query.emailTemplates.findFirst({
-      where: eq(emailTemplates.code, 'ASSESSMENT_REMINDER')
+    where: eq(emailTemplates.code, 'ASSESSMENT_REMINDER'),
   })
-  
+
   let emailsSent = 0
   if (template) {
     for (const p of pending) {
-        const recipientEmail = p.user.email
-        const recipientName = p.user.profile?.fullName || 'Employee'
-        
-        const subject = replacePlaceholders(template.subject, { 
-            cycleName: cycle?.name || 'Assessment Cycle',
-            fullName: recipientName
-        })
-        const body = replacePlaceholders(template.body, {
-            cycleName: cycle?.name || 'Assessment Cycle',
-            daysLeft: "some", // Calculation logic can be added
-            link: `${process.env.APP_URL || 'http://localhost:3000'}/competencies/my-assessment`,
-            fullName: recipientName
-        })
+      const recipientEmail = p.user.email
+      const recipientName = p.user.profile?.fullName || 'Employee'
 
-        try {
+      const subject = replacePlaceholders(template.subject, {
+        cycleName: cycle?.name || 'Assessment Cycle',
+        fullName: recipientName,
+      })
+      const body = replacePlaceholders(template.body, {
+        cycleName: cycle?.name || 'Assessment Cycle',
+        daysLeft: 'some', // Calculation logic can be added
+        link: `${process.env.APP_URL || 'http://localhost:3000'}/competencies/my-assessment`,
+        fullName: recipientName,
+      })
+
+      try {
         const res = await sendEmail(recipientEmail, subject, body)
         if (res.success) {
-            await db.insert(emailLogs).values({
-                templateId: template.id,
-                senderId: requester.id,
-                recipientEmail,
-                subject,
-                body,
-                status: 'SENT',
-                sentAt: new Date(),
-            })
-            emailsSent++
+          await db.insert(emailLogs).values({
+            templateId: template.id,
+            senderId: requester.id,
+            recipientEmail,
+            subject,
+            body,
+            status: 'SENT',
+            sentAt: new Date(),
+          })
+          emailsSent++
         }
-        } catch (e) {
-            console.error(`Failed to send email to ${recipientEmail}`, e)
-        }
+      } catch (e) {
+        console.error(`Failed to send email to ${recipientEmail}`, e)
+      }
     }
   }
 
