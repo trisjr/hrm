@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useRouter } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { MoreHorizontal, Pencil, Plus, Trash } from 'lucide-react'
 import { toast } from 'sonner'
@@ -39,7 +39,7 @@ interface EducationExperienceListProps {
 export function EducationExperienceList({
   items,
 }: EducationExperienceListProps) {
-  const router = useRouter()
+  const queryClient = useQueryClient()
   const token = useAuthStore((state) => state.token) || ''
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogType, setDialogType] = useState<'Education' | 'Experience'>(
@@ -71,7 +71,7 @@ export function EducationExperienceList({
           data: { token, id },
         })
         toast.success('Item deleted successfully')
-        router.invalidate()
+        queryClient.invalidateQueries({ queryKey: ['education-experience', 'me'] })
       } catch (error) {
         console.error('Delete failed', error)
         toast.error('Failed to delete item')
@@ -99,7 +99,7 @@ export function EducationExperienceList({
         })
         toast.success('Item created successfully')
       }
-      router.invalidate()
+      queryClient.invalidateQueries({ queryKey: ['education-experience', 'me'] })
       setDialogOpen(false)
     } catch (error) {
       console.error('Save failed', error)

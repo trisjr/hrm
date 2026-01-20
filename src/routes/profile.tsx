@@ -1,6 +1,6 @@
 import { createFileRoute, useRouter } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
-import { toast } from 'sonner'
+import { useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
   getMyEducationExperienceFn,
   getMyProfileFn,
@@ -56,51 +56,37 @@ interface ProfileData {
 function RouteComponent() {
   const token = useAuthStore((state) => state.token)
   const router = useRouter()
-  const [data, setData] = useState<ProfileData | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  // Ensure we have a token, though useEffect handles redirect, hooks must run
+  const enabled = !!token
 
   useEffect(() => {
-    // If no token immediately, redirect
     if (!token) {
       router.navigate({ to: '/login' })
-      return
     }
-
-    const fetchData = async () => {
-      try {
-        setIsLoading(true)
-        setError(null)
-
-        const [profileRes, eduRes, pendingReqRes] = await Promise.all([
-          getMyProfileFn({ data: { token } }),
-          getMyEducationExperienceFn({ data: { token } }),
-          getMyPendingProfileRequestFn({ data: { token } }),
-        ])
-
-        setData({
-          user: profileRes.user as ProfileData['user'],
-          educationExperience: eduRes.items as ProfileData['educationExperience'],
-          pendingRequest: pendingReqRes.request as ProfileData['pendingRequest'],
-        })
-      } catch (err: any) {
-        console.error('Failed to load profile', err)
-        setError('Failed to load profile data.')
-        
-        // Handle unauthorized specifically if possible, generic for now
-        if (err.message && err.message.includes('Unauthorized')) {
-           toast.error('Session expired. Please login again.')
-           router.navigate({ to: '/login' })
-        } else {
-           toast.error('Failed to load profile. Please try again.')
-        }
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchData()
   }, [token, router])
+
+  const profileQuery = useQuery({
+    queryKey: ['profile', 'me'],
+    queryFn: () => getMyProfileFn({ data: { token: token! } }),
+    enabled,
+  })
+
+  const eduQuery = useQuery({
+    queryKey: ['education-experience', 'me'],
+    queryFn: () => getMyEducationExperienceFn({ data: { token: token! } }),
+    enabled,
+  })
+
+  const pendingRequestQuery = useQuery({
+    queryKey: ['profile-request', 'me'],
+    queryFn: () => getMyPendingProfileRequestFn({ data: { token: token! } }),
+    enabled,
+  })
+
+  const isLoading =
+    profileQuery.isLoading || eduQuery.isLoading || pendingRequestQuery.isLoading
+  const isError =
+    profileQuery.isError || eduQuery.isError || pendingRequestQuery.isError
 
   if (isLoading) {
     return (
@@ -121,15 +107,21 @@ function RouteComponent() {
     )
   }
 
-  if (error || !data) {
+  if (isError || !profileQuery.data) {
+     const errorMessage = profileQuery.error?.message || "Failed to load profile data"
+     
      return (
         <ProfileLayout 
            sidebar={<div className="text-red-500 font-medium">Error loading profile.</div>}
            content={
               <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
-                 <p className="mb-4">{error || "Profile not found"}</p>
+                 <p className="mb-4">{errorMessage}</p>
                  <button 
-                    onClick={() => window.location.reload()}
+                    onClick={() => {
+                        profileQuery.refetch()
+                        eduQuery.refetch()
+                        pendingRequestQuery.refetch()
+                    }}
                     className="underline text-primary"
                  >
                     Retry
@@ -140,15 +132,20 @@ function RouteComponent() {
      )
   }
 
+  // Safe to assume data exists here due to checks above
+  const user = profileQuery.data.user as ProfileData['user']
+  const items = (eduQuery.data?.items || []) as ProfileData['educationExperience']
+  const pendingRequest = pendingRequestQuery.data?.request as ProfileData['pendingRequest']
+
   return (
     <ProfileLayout
       sidebar={
         <UserInfoSidebar
-          user={data.user}
-          pendingRequest={data.pendingRequest}
+          user={user}
+          pendingRequest={pendingRequest}
         />
       }
-      content={<EducationExperienceList items={data.educationExperience} />}
+      content={<EducationExperienceList items={items} />}
     />
   )
 }

@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { format } from 'date-fns'
+import { IconLoader2 } from '@tabler/icons-react'
 import type { CreateEducationExperienceInput } from '@/lib/profile.schemas'
 import { createEducationExperienceSchema } from '@/lib/profile.schemas'
 import { Button } from '@/components/ui/button'
@@ -75,7 +76,7 @@ export function EducationExperienceDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-120">
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? 'Edit' : 'Add'} {type}
@@ -157,7 +158,7 @@ export function EducationExperienceDialog({
                             date ? format(date, 'yyyy-MM-dd') : undefined,
                           )
                         }
-                        placeholder="End date"
+                        placeholder="Start date"
                       />
                     </FormControl>
                     <FormMessage />
@@ -207,7 +208,12 @@ export function EducationExperienceDialog({
               )}
             />
             <DialogFooter>
-              <Button type="submit">Save changes</Button>
+              <Button type="submit" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting && (
+                  <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Save changes
+              </Button>
             </DialogFooter>
           </form>
         </Form>
