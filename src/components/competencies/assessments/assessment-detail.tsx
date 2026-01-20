@@ -11,6 +11,7 @@ import {
   IconListCheck,
 } from '@tabler/icons-react'
 import { AssessmentForm } from './assessment-form'
+import { ScoreComparisonTable } from './score-comparison-table'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import {
@@ -198,6 +199,11 @@ export function AssessmentDetail({
         </div>
       )}
 
+      {/* Score Comparison Table (DISCUSSION Mode) */}
+      {mode === 'DISCUSSION' && !isReadOnly && (
+        <ScoreComparisonTable details={details} />
+      )}
+
       {/* Competency Groups */}
       {Object.entries(groupedDetails).map(([groupName, groupDetails]: [string, any]) => (
         <div key={groupName} className="mb-10">
@@ -287,11 +293,13 @@ export function AssessmentDetail({
                 >
                     {submitMutation.isPending ? (
                         <>
-                            <IconLoader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...
+                            <IconLoader2 className="mr-2 h-4 w-4 animate-spin" /> 
+                            {mode === 'DISCUSSION' ? 'Finalizing...' : 'Submitting...'}
                         </>
                     ) : (
                         <>
-                            Submit Assessment <IconSend className="ml-2 h-4 w-4" />
+                            {mode === 'DISCUSSION' ? 'Finalize Assessment' : 'Submit Assessment'} 
+                            <IconSend className="ml-2 h-4 w-4" />
                         </>
                     )}
                 </Button>
